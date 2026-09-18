@@ -330,6 +330,15 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter:invert(.65); curs
   border-radius:9px; cursor:pointer; transition:all .18s;
 }
 .days button[aria-pressed="true"] { color:#0a1f1d; background:var(--cyan); border-color:transparent; }
+.chips { display:flex; gap:7px; flex-wrap:wrap; margin-bottom:12px; }
+.chips button {
+  font:inherit; font-size:12.5px; font-weight:600; color:var(--dim);
+  background:var(--bg-2); border:1px solid var(--line-2); border-radius:999px;
+  padding:8px 14px; cursor:pointer; transition:all .18s;
+}
+.chips button[aria-pressed="true"] {
+  color:#241700; background:var(--amber); border-color:transparent;
+}
 .presets { display:flex; gap:6px; margin-top:7px; flex-wrap:wrap; }
 .presets button {
   font:inherit; font-size:11px; font-weight:600; color:var(--dim); background:transparent;
@@ -590,6 +599,9 @@ let snapshot = null, timers = [], events = [], diag = null, usage = null;
 // original page forever, so we compare this against what the server reports
 // and offer a reload rather than making you re-add it to the Home Screen.
 let myBuild = null, updateReady = false;
+// Kept outside renderDevice so the builder does not reset itself
+// every time a poll repaints the tab.
+let scenePick = [], sceneVerb = "on";
 let timersKey = "", logKey = "", deviceKey = "";
 let busy = new Set(), editingName = null, editorOpen = null;
 let reachable = true, tab = "control";
@@ -1206,6 +1218,86 @@ function renderDevice(force) {
     "it back. Tailscale must be on — at home too.";
   c4.appendChild(n5);
   els.deviceCards.appendChild(c4);
+
+  // --- custom scene link builder
+  const c5 = document.createElement("div"); c5.className = "card wide";
+  const h5 = document.createElement("h3"); h5.textContent = "Custom link";
+  c5.appendChild(h5);
+  const n6 = document.createElement("div"); n6.className = "hint";
+  n6.style.marginBottom = "12px";
+  n6.textContent =
+    "Pick the sockets you want one link to control, choose what it should do, " +
+    "then copy it into a Shortcut. One tap or one Siri phrase switches them together.";
+  c5.appendChild(n6);
+
+  const pick = new Set(scenePick);
+  let sceneAction = sceneVerb;
+
+  const chips = document.createElement("div"); chips.className = "chips";
+  const chipBtns = (snapshot ? snapshot.sockets : []).map(s => {
+    const b = document.createElement("button");
+    b.type = "button"; b.textContent = s.name;
+    b.onclick = () => {
+      if (pick.has(s.id)) pick.delete(s.id); else pick.add(s.id);
+      scenePick = [...pick];
+      paint();
+    };
+    chips.appendChild(b);
+    return { b, id: s.id, name: s.name };
+  });
+  c5.appendChild(chips);
+
+  const seg2 = document.createElement("div"); seg2.className = "seg";
+  seg2.style.gridTemplateColumns = "1fr 1fr 1fr";
+  seg2.style.marginBottom = "12px";
+  const verbs = ["on", "off", "toggle"].map(v => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = v === "on" ? "Turn on" : v === "off" ? "Turn off" : "Toggle";
+    if (v !== "on") b.className = "off-opt";
+    b.onclick = () => { sceneAction = v; sceneVerb = v; paint(); };
+    seg2.appendChild(b);
+    return { b, v };
+  });
+  c5.appendChild(seg2);
+
+  const out = document.createElement("div"); out.className = "lr-url";
+  c5.appendChild(out);
+
+  const actions2 = document.createElement("div");
+  actions2.className = "bulk"; actions2.style.marginTop = "12px";
+  const copyScene = document.createElement("button");
+  copyScene.className = "btn primary"; copyScene.type = "button";
+  copyScene.textContent = "Copy link";
+  actions2.appendChild(copyScene);
+  c5.appendChild(actions2);
+
+  function sceneUrl() {
+    const ids = chipBtns.filter(c => pick.has(c.id));
+    if (!ids.length) return "";
+    return base + "/s/" + ids.map(c => slug(c.name) || String(c.id)).join("+")
+               + "/" + sceneAction;
+  }
+
+  function paint() {
+    chipBtns.forEach(c => c.b.setAttribute("aria-pressed", String(pick.has(c.id))));
+    verbs.forEach(x => x.b.setAttribute("aria-pressed", String(x.v === sceneAction)));
+    const u = sceneUrl();
+    out.textContent = u || "Pick at least one socket above.";
+    out.style.color = u ? "" : "var(--mute)";
+    copyScene.disabled = !u;
+  }
+
+  copyScene.onclick = async () => {
+    const u = sceneUrl();
+    if (!u) return;
+    try { await navigator.clipboard.writeText(u); copyScene.textContent = "Copied"; }
+    catch (e) { copyScene.textContent = "Select the link above"; }
+    setTimeout(() => { copyScene.textContent = "Copy link"; }, 1600);
+  };
+
+  paint();
+  els.deviceCards.appendChild(c5);
 
   els.deviceCards.appendChild(c3);
 }

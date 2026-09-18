@@ -399,23 +399,43 @@ class StripController:
             current = live[socket_no - 1] if live else self.desired[socket_no - 1]
             return self.set_socket(socket_no, not current, source=source)
 
-    def set_all(self, on: bool, source: str = "app") -> Dict[str, Any]:
-        """Switch every socket, with a single state save rather than one each."""
+    def set_many(self, sockets: List[int], on: bool,
+                 source: str = "app") -> Dict[str, Any]:
+        """
+        Switch a group of sockets together.
+
+        One state save and one snapshot for the whole group rather than per
+        socket, which is what makes a scene link ("light + monitor on") as
+        quick as a single one.
+        """
+        wanted: List[int] = []
+        for n in sockets:
+            if not 1 <= n <= SOCKET_COUNT:
+                raise PowerUSBError(f"socket must be 1..{SOCKET_COUNT}, got {n}")
+            if n not in wanted:
+                wanted.append(n)
+        if not wanted:
+            raise PowerUSBError("no sockets given")
+
         with self.lock:
             err = None
-            for i in range(1, SOCKET_COUNT + 1):
-                if self.desired[i - 1] != on:
+            for n in wanted:
+                if self.desired[n - 1] != on:
                     self.events.add(
                         "socket",
-                        f"{self.names[i - 1]} turned {'on' if on else 'off'}"
+                        f"{self.names[n - 1]} turned {'on' if on else 'off'}"
                         + ("" if self.online else " (queued - no mains power)"),
-                        socket=i, on=on, source=source,
+                        socket=n, on=on, source=source,
                     )
-                self.desired[i - 1] = on
-                err = self._switch(i, on) or err
+                self.desired[n - 1] = on
+                err = self._switch(n, on) or err
             self._save_desired()
             self.last_change = _now()
             return self.snapshot(queued=not self.online, error=err)
+
+    def set_all(self, on: bool, source: str = "app") -> Dict[str, Any]:
+        """Switch every socket, with a single state save rather than one each."""
+        return self.set_many(list(range(1, SOCKET_COUNT + 1)), on, source=source)
 
     def rename(self, socket_no: int, name: str) -> Dict[str, Any]:
         """Relabel a socket and persist it to config.json."""
@@ -501,6 +521,23 @@ class StripController:
             return f"{s['name']} is {'on' if s['on'] else 'off'}."
         return " ".join(f"{s['name']} is {'on' if s['on'] else 'off'}."
                         for s in snap["sockets"])
+
+    def spoken_group(self, sockets: List[int]) -> str:
+        """A sentence Siri can read back about several sockets at once."""
+        snap = self.snapshot()
+        if not snap["online"]:
+            return ("The power strip has no mains power. Your change is saved and "
+                    "will apply when the wall switch comes back on.")
+        items = [snap["sockets"][n - 1] for n in sockets]
+        names = [i["name"] for i in items]
+        if len({i["on"] for i in items}) == 1:
+            state = "on" if items[0]["on"] else "off"
+            if len(names) == 1:
+                return f"{names[0]} is {state}."
+            joined = (" and ".join(names) if len(names) == 2
+                      else ", ".join(names[:-1]) + " and " + names[-1])
+            return f"{joined} are {state}."
+        return " ".join(f"{i['name']} is {'on' if i['on'] else 'off'}." for i in items)
 
     def usage_summary(self, hours: float = 24.0) -> Dict[str, Any]:
         """
@@ -806,6 +843,14 @@ class Handler(BaseHTTPRequestHandler):
         lines += [f"{base}/s/all/on", f"{base}/s/all/off",
                   f"{base}/s/status", ""]
         lines.append("A socket number also works, e.g. /s/1/on")
+        lines.append("")
+        lines.append("Several at once, separated by + or , :")
+        names = [self.controller._norm(n) or str(i + 1)
+                 for i, n in enumerate(self.controller.names)]
+        if len(names) >= 2:
+            pair = names[0] + "+" + names[1]
+            lines.append(f"{base}/s/{pair}/on")
+            lines.append(f"{base}/s/{pair}/off")
         return "\n".join(lines)
 
     def _handle_shortcut(self, rest: str) -> None:
@@ -830,23 +875,32 @@ class Handler(BaseHTTPRequestHandler):
                     reply(c.spoken())
                 return
 
-            socket_no = c.resolve(target)
-            if socket_no is None:
-                names = ", ".join(c.names)
-                reply(f"I do not know a socket called {target!r}. "
-                      f"Try one of: {names}.", 404)
-                return
+            # A target may name several sockets: "light+monitor" or
+            # "light,monitor". That is what makes a one-tap scene link, and it
+            # switches them as one group rather than one request each.
+            wanted = [t for t in target.replace("+", ",").split(",") if t.strip()]
+            resolved: List[int] = []
+            for piece in wanted:
+                n = c.resolve(piece)
+                if n is None:
+                    names = ", ".join(c.names)
+                    reply(f"I do not know a socket called {piece!r}. "
+                          f"Try one of: {names}.", 404)
+                    return
+                if n not in resolved:
+                    resolved.append(n)
 
             if action == "on":
-                c.set_socket(socket_no, True, source="siri")
+                c.set_many(resolved, True, source="siri")
             elif action == "off":
-                c.set_socket(socket_no, False, source="siri")
+                c.set_many(resolved, False, source="siri")
             elif action == "toggle":
-                c.toggle_socket(socket_no, source="siri")
+                for n in resolved:
+                    c.toggle_socket(n, source="siri")
             elif action != "status":
                 reply(f"Unknown action {action!r}. Use on, off, toggle or status.", 400)
                 return
-            reply(c.spoken(socket_no))
+            reply(c.spoken_group(resolved))
         except PowerUSBError as exc:
             reply(f"Sorry, that did not work: {exc}", 500)
 
