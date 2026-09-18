@@ -41,6 +41,7 @@ from urllib.parse import urlparse, parse_qs
 
 from .config import ROOT, load_config, save_names, save_watts
 from .device import PowerUSB, PowerUSBError, SOCKET_COUNT, is_present
+from .away import AwayMode, AwayError
 from .events import EventLog
 from .schedule import Scheduler, ScheduleError
 
@@ -48,6 +49,7 @@ WEB_DIR = ROOT / "web"
 STATE_PATH = ROOT / "state.json"
 SCHEDULE_PATH = ROOT / "schedules.json"
 EVENTS_PATH = ROOT / "events.jsonl"
+AWAY_PATH = ROOT / "away.json"
 
 # How long a live hardware read stays fresh. Several clients polling at once
 # should not turn into a storm of USB traffic.
@@ -637,6 +639,104 @@ class StripController:
                     "this strip cannot measure power.",
         }
 
+    def usage_daily(self, days: int = 7) -> Dict[str, Any]:
+        """
+        On-time per socket per local day, for the usage chart.
+
+        Same replay as usage_summary, but bucketed into days and split at local
+        midnight. Time while mains was off counts for nobody, and days the log
+        does not reach back to are reported as null rather than zero so the
+        chart can show "no data" instead of implying the sockets were idle.
+        """
+        days = max(1, min(int(days or 7), 31))
+        now = datetime.now(timezone.utc).astimezone()
+        midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        start = midnight - timedelta(days=days - 1)
+
+        parsed = []
+        for entry in reversed(self.events.recent(1000)):       # oldest first
+            try:
+                parsed.append((datetime.fromisoformat(entry.get("t", "")), entry))
+            except (ValueError, TypeError):
+                continue
+
+        state: List[Optional[bool]] = [None] * SOCKET_COUNT
+        mains: Optional[bool] = None
+
+        def apply(entry: Dict[str, Any]) -> None:
+            nonlocal mains
+            if entry.get("kind") == "socket" and entry.get("socket"):
+                idx = int(entry["socket"]) - 1
+                if 0 <= idx < SOCKET_COUNT:
+                    state[idx] = bool(entry.get("on"))
+            elif entry.get("kind") == "mains":
+                mains = bool(entry.get("on"))
+
+        for when, entry in parsed:
+            if when >= start:
+                break
+            apply(entry)
+
+        with self.lock:
+            live = self.live_states() or list(self.desired)
+            online_now = self.online
+        for i in range(SOCKET_COUNT):
+            if state[i] is None:
+                state[i] = bool(live[i])
+        if mains is None:
+            mains = online_now
+
+        # Only claim the span the log actually covers.
+        earliest = parsed[0][0] if parsed else None
+        covered_from = max(start, earliest) if earliest else now
+
+        buckets = [[0.0] * SOCKET_COUNT for _ in range(days)]
+
+        def day_index(moment: datetime) -> int:
+            return (moment.date() - start.date()).days
+
+        def accrue(frm: datetime, to: datetime) -> None:
+            if to <= frm or not mains:
+                return
+            cursor = frm
+            while cursor < to:
+                day_end = (cursor.replace(hour=0, minute=0, second=0, microsecond=0)
+                           + timedelta(days=1))
+                slice_end = min(day_end, to)
+                idx = day_index(cursor)
+                if 0 <= idx < days:
+                    span = (slice_end - cursor).total_seconds()
+                    for i in range(SOCKET_COUNT):
+                        if state[i]:
+                            buckets[idx][i] += span
+                cursor = slice_end
+
+        cursor = covered_from
+        for when, entry in parsed:
+            if when < cursor:
+                continue
+            accrue(cursor, when)
+            cursor = when
+            apply(entry)
+        accrue(cursor, now)
+
+        out_days = []
+        for d in range(days):
+            day = (start + timedelta(days=d)).date()
+            has_data = (start + timedelta(days=d + 1)) > covered_from
+            out_days.append({
+                "date": day.isoformat(),
+                "weekday": day.strftime("%a"),
+                "hours": [round(buckets[d][i] / 3600.0, 3) if has_data else None
+                          for i in range(SOCKET_COUNT)],
+            })
+
+        return {
+            "days": out_days,
+            "sockets": [{"id": i + 1, "name": self.names[i]} for i in range(SOCKET_COUNT)],
+            "covered_from": covered_from.isoformat(timespec="seconds"),
+        }
+
     def set_watts(self, socket_no: int, watts: float) -> None:
         if not 1 <= socket_no <= SOCKET_COUNT:
             raise PowerUSBError(f"socket must be 1..{SOCKET_COUNT}, got {socket_no}")
@@ -690,6 +790,7 @@ class Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"  # keep-alive; the GUI polls constantly
     controller: StripController
     scheduler: Scheduler
+    away: AwayMode
     token: str
 
     def log_message(self, fmt, *args):  # quieter than the stdlib default
@@ -789,7 +890,8 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(snap)
             return
         if route == "/api/timers":
-            self._send_json({"timers": self.scheduler.list()})
+            self._send_json({"timers": self.scheduler.list(),
+                             "countdowns": self.scheduler.list_countdowns()})
             return
         if route == "/api/log":
             try:
@@ -797,6 +899,16 @@ class Handler(BaseHTTPRequestHandler):
             except ValueError:
                 limit = 200
             self._send_json({"events": self.controller.events.recent(limit)})
+            return
+        if route == "/api/usage/daily":
+            try:
+                days = int((query.get("days") or ["7"])[0])
+            except ValueError:
+                days = 7
+            self._send_json(self.controller.usage_daily(days))
+            return
+        if route == "/api/away":
+            self._send_json(self.away.status())
             return
         if route == "/api/usage":
             try:
@@ -819,6 +931,14 @@ class Handler(BaseHTTPRequestHandler):
         route = parsed.path.rstrip("/") or "/"
         if not self._authorised(parse_qs(parsed.query)):
             self._send_json({"error": "unauthorised"}, 401)
+            return
+        if route.startswith("/api/countdown/"):
+            try:
+                self.scheduler.cancel_countdown(route[len("/api/countdown/"):])
+            except ScheduleError as exc:
+                self._send_json({"error": str(exc)}, 404)
+                return
+            self._send_json({"countdowns": self.scheduler.list_countdowns()})
             return
         if route.startswith("/api/timers/"):
             try:
@@ -890,7 +1010,10 @@ class Handler(BaseHTTPRequestHandler):
                 if n not in resolved:
                     resolved.append(n)
 
-            if action == "on":
+            delayed = (len(parts) >= 4 and parts[2].lower() == "in")
+            if delayed:
+                pass                       # handled below, do not switch now
+            elif action == "on":
                 c.set_many(resolved, True, source="siri")
             elif action == "off":
                 c.set_many(resolved, False, source="siri")
@@ -900,6 +1023,24 @@ class Handler(BaseHTTPRequestHandler):
             elif action != "status":
                 reply(f"Unknown action {action!r}. Use on, off, toggle or status.", 400)
                 return
+
+            # /s/<target>/off/in/30  -- a sleep timer straight from a Shortcut.
+            if len(parts) >= 4 and parts[2].lower() == "in" and action in ("on", "off"):
+                try:
+                    minutes = float(parts[3])
+                except ValueError:
+                    reply(f"{parts[3]!r} is not a number of minutes.", 400)
+                    return
+                try:
+                    for n in resolved:
+                        self.scheduler.add_countdown(n, action, minutes)
+                except ScheduleError as exc:
+                    reply(f"Sorry: {exc}", 400)
+                    return
+                names = ", ".join(c.names[n - 1] for n in resolved)
+                reply(f"{names} will turn {action} in {minutes:g} minutes.")
+                return
+
             reply(c.spoken_group(resolved))
         except PowerUSBError as exc:
             reply(f"Sorry, that did not work: {exc}", 500)
@@ -923,6 +1064,19 @@ class Handler(BaseHTTPRequestHandler):
                 self.controller.events.clear()
                 self.controller.events.add("system", "Activity log cleared")
                 self._send_json({"events": self.controller.events.recent(50)})
+                return
+            if route == "/api/away":
+                self._send_json(self.away.update(body))
+                return
+            if route == "/api/countdown":
+                self.scheduler.add_countdown(
+                    body.get("socket"), body.get("action", "off"),
+                    body.get("minutes", 30), body.get("label", ""))
+                self._send_json({"countdowns": self.scheduler.list_countdowns()})
+                return
+            if route.startswith("/api/countdown/"):
+                self.scheduler.cancel_countdown(route[len("/api/countdown/"):])
+                self._send_json({"countdowns": self.scheduler.list_countdowns()})
                 return
             if route == "/api/timers":
                 self.scheduler.add(body)
@@ -959,7 +1113,7 @@ class Handler(BaseHTTPRequestHandler):
                         self.controller.set_socket(socket_no, bool(body.get("on")))
                     )
                 return
-        except ScheduleError as exc:
+        except (ScheduleError, AwayError) as exc:
             self._send_json({"error": str(exc)}, 400)
             return
         except (PowerUSBError, ValueError) as exc:
@@ -1101,9 +1255,12 @@ def main() -> int:
     controller = StripController(cfg["names"], events=events, watts=cfg["watts"])
     scheduler = Scheduler(controller, SCHEDULE_PATH)
     scheduler.set_logger(log)
+    away = AwayMode(controller, AWAY_PATH)
+    away.set_logger(log)
 
     Handler.controller = controller
     Handler.scheduler = scheduler
+    Handler.away = away
     Handler.token = cfg["token"]
     TCPHandler.controller = controller
     TCPHandler.token = cfg["token"]
@@ -1138,6 +1295,7 @@ def main() -> int:
     # launch cannot fight the running instance over the USB handle.
     controller.start()
     scheduler.start()
+    away.start_thread()
     events.add("system", "Server started")
 
     threading.Thread(target=http.serve_forever, name="http", daemon=True).start()
@@ -1162,7 +1320,10 @@ def main() -> int:
     if tcp:
         log(f"  TCP control  {host}:{tcp_port}")
     log(f"  auth         {'token required' if cfg['token'] else 'none (anyone on your tailnet can control it)'}")
-    log(f"  timers       {len(scheduler.timers)} configured")
+    log(f"  timers       {len(scheduler.timers)} configured, "
+        f"{len(scheduler.countdowns)} countdown(s)")
+    if away.settings["enabled"]:
+        log(f"  away mode    ON for sockets {away.settings['sockets']}")
     log(f"  strip        {'online' if controller.online else 'connecting...'}")
 
     try:
@@ -1171,6 +1332,7 @@ def main() -> int:
     except KeyboardInterrupt:
         log("shutting down")
     finally:
+        away.stop()
         scheduler.stop()
         controller.stop()
         http.shutdown()

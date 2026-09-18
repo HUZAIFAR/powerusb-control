@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#07080b">
-<meta name="color-scheme" content="dark">
+<meta name="color-scheme" content="dark light">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -17,7 +17,8 @@
 :root {
   --bg:#07080b; --bg-2:#0b0d12; --card:#101319; --card-2:#151922; --card-hi:#1a1f2a;
   --line:rgba(255,255,255,.065); --line-2:rgba(255,255,255,.115);
-  --text:#e9edf5; --dim:#8b93a3; --mute:#5a6172;
+  --text:#e9edf5; --dim:#8b93a3; --mute:#7c8593;
+  --sw-off:#272c37; --grid-ink:rgba(255,255,255,.016); --knob:#ffffff;
   --amber:#ffb340; --amber-2:#ff9500;
   --amber-a10:rgba(255,179,64,.10); --amber-a18:rgba(255,179,64,.18);
   --amber-a35:rgba(255,179,64,.35); --amber-a55:rgba(255,179,64,.55);
@@ -29,6 +30,49 @@
   --ease: cubic-bezier(.32,1.25,.5,1);
   --ease-out: cubic-bezier(.22,.7,.3,1);
 }
+
+/* ---------- light theme ----------
+   Every value here was contrast-checked against its own surface rather than
+   eyeballed: body text >= 4.5:1, chart marks >= 3:1. The dark amber is not a
+   stylistic choice - the bright one used in dark mode is only 1.78:1 on white
+   and would be unreadable as a mark or a label. */
+:root[data-theme="light"] {
+  --bg:#f4f5f8; --bg-2:#eceef3; --card:#ffffff; --card-2:#fafbfd; --card-hi:#eef1f6;
+  --line:rgba(16,20,30,.10); --line-2:rgba(16,20,30,.17);
+
+  --text:#14161c; --dim:#4f5866; --mute:#5d6673;
+
+  --amber:#b45f00; --amber-2:#8f4c00;
+  --amber-a10:rgba(180,95,0,.09); --amber-a18:rgba(180,95,0,.15);
+  --amber-a35:rgba(180,95,0,.34); --amber-a55:rgba(180,95,0,.42);
+
+  --cyan:#0f7d76; --cyan-a12:rgba(15,125,118,.11); --cyan-a30:rgba(15,125,118,.32);
+
+  --green:#1e7a45; --warn:#8a5a00;
+  --warn-a10:rgba(138,90,0,.09); --warn-a28:rgba(138,90,0,.26);
+  --red:#c0392b; --red-a10:rgba(192,57,43,.08); --red-a30:rgba(192,57,43,.28);
+
+  --sw-off:#ccd2dc;
+  --grid-ink:rgba(16,20,30,.05);
+  --knob:#ffffff;
+}
+/* auto: follow the system unless the user has explicitly chosen dark */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg:#f4f5f8; --bg-2:#eceef3; --card:#ffffff; --card-2:#fafbfd; --card-hi:#eef1f6;
+    --line:rgba(16,20,30,.10); --line-2:rgba(16,20,30,.17);
+    --text:#14161c; --dim:#4f5866; --mute:#5d6673;
+    --amber:#b45f00; --amber-2:#8f4c00;
+    --amber-a10:rgba(180,95,0,.09); --amber-a18:rgba(180,95,0,.15);
+    --amber-a35:rgba(180,95,0,.34); --amber-a55:rgba(180,95,0,.42);
+    --cyan:#0f7d76; --cyan-a12:rgba(15,125,118,.11); --cyan-a30:rgba(15,125,118,.32);
+    --green:#1e7a45; --warn:#8a5a00;
+    --warn-a10:rgba(138,90,0,.09); --warn-a28:rgba(138,90,0,.26);
+    --red:#c0392b; --red-a10:rgba(192,57,43,.08); --red-a30:rgba(192,57,43,.28);
+    --sw-off:#ccd2dc; --grid-ink:rgba(16,20,30,.05); --knob:#ffffff;
+  }
+}
+
 * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 [hidden] { display:none !important; }
 html { -webkit-text-size-adjust:100%; }
@@ -46,8 +90,8 @@ body::before {
 }
 body::after {
   content:""; position:fixed; inset:0;
-  background-image:linear-gradient(rgba(255,255,255,.016) 1px,transparent 1px),
-                   linear-gradient(90deg,rgba(255,255,255,.016) 1px,transparent 1px);
+  background-image:linear-gradient(var(--grid-ink) 1px,transparent 1px),
+                   linear-gradient(90deg,var(--grid-ink) 1px,transparent 1px);
   background-size:46px 46px;
   mask-image:radial-gradient(ellipse at 50% 0%,#000 0%,transparent 78%);
   -webkit-mask-image:radial-gradient(ellipse at 50% 0%,#000 0%,transparent 78%);
@@ -131,7 +175,14 @@ h1 { margin:0; font-size:19px; font-weight:660; letter-spacing:-.02em;
   background:var(--cyan-a12); color:var(--cyan); border-radius:999px;
   padding:1px 5px; min-width:16px;
 }
-@media (max-width:430px) { .tab .lbl { display:none; } .tab { padding:10px 4px; } }
+@media (max-width:430px) {
+  .tab .lbl { display:none; }
+  .tab { padding:10px 4px; }
+  /* two header buttons now compete with the title for width */
+  h1 { font-size:17px; }
+  .status { padding:6px 9px 6px 8px; font-size:11px; }
+  .iconbtn { width:31px; height:31px; }
+}
 
 /* ---------- banner ---------- */
 .banner {
@@ -209,7 +260,7 @@ h1 { margin:0; font-size:19px; font-weight:660; letter-spacing:-.02em;
 }
 .sw {
   position:relative; z-index:1; flex:none; width:52px; height:31px; border-radius:999px;
-  background:#272c37; border:1px solid var(--line-2);
+  background:var(--sw-off); border:1px solid var(--line-2);
   transition:background .34s var(--ease),box-shadow .34s,border-color .34s;
 }
 .socket.on .sw {
@@ -218,7 +269,7 @@ h1 { margin:0; font-size:19px; font-weight:660; letter-spacing:-.02em;
 }
 .sw::after {
   content:""; position:absolute; top:2px; left:2px; width:25px; height:25px;
-  border-radius:50%; background:#fff; box-shadow:0 2px 5px rgba(0,0,0,.45);
+  border-radius:50%; background:var(--knob); box-shadow:0 2px 5px rgba(0,0,0,.3);
   transition:transform .34s var(--ease);
 }
 .socket.on .sw::after { transform:translateX(21px); }
@@ -383,6 +434,46 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter:invert(.65); curs
 }
 .entry .src.timer { color:var(--cyan); border-color:var(--cyan-a30); }
 
+
+/* ---------- countdown ---------- */
+.cd { display:flex; align-items:center; gap:12px; padding:13px 15px;
+      background:var(--card); border:1px solid var(--cyan-a30);
+      border-radius:16px; margin-bottom:10px; }
+.cd .cd-left { flex:1; min-width:0; }
+.cd .cd-name { font-size:13.5px; font-weight:600; }
+.cd .cd-sub { font-size:11.5px; color:var(--mute); margin-top:2px; }
+.cd .cd-time { font-family:var(--mono); font-size:19px; font-weight:600;
+               color:var(--cyan); font-variant-numeric:tabular-nums; flex:none; }
+.quick { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+.quick button {
+  font:inherit; font-size:12px; font-weight:600; color:var(--dim);
+  background:var(--bg-2); border:1px solid var(--line-2); border-radius:999px;
+  padding:7px 13px; cursor:pointer; transition:all .18s;
+}
+.quick button:hover { color:var(--cyan); border-color:var(--cyan-a30); }
+
+/* ---------- away mode ---------- */
+.away-head { display:flex; align-items:center; gap:13px; }
+.away-head .meta { flex:1; min-width:0; }
+.away-body { margin-top:14px; }
+.away-note { font-size:11.5px; color:var(--mute); margin-top:10px; line-height:1.6; }
+.card.lit { border-color:var(--cyan-a30); }
+
+/* ---------- usage chart ---------- */
+.chart-row { margin-bottom:14px; }
+.chart-top { display:flex; align-items:baseline; gap:8px; margin-bottom:5px; }
+.chart-name { flex:1; min-width:0; font-size:13px; font-weight:600;
+              overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.chart-total { font-family:var(--mono); font-size:11.5px; color:var(--mute);
+               font-variant-numeric:tabular-nums; flex:none; }
+.chart-svg { display:block; width:100%; height:46px; overflow:visible; }
+.chart-days { display:flex; margin-top:2px; }
+.chart-days span { flex:1; text-align:center; font-size:10px; color:var(--mute);
+                   font-variant-numeric:tabular-nums; }
+.chart-readout { font-size:11.5px; color:var(--dim); margin-top:10px;
+                 min-height:1.4em; font-variant-numeric:tabular-nums; }
+.chart-empty { font-size:12.5px; color:var(--mute); padding:14px 0; }
+
 /* ---------- device cards ---------- */
 .cards { display:flex; flex-direction:column; gap:12px; }
 .card { background:var(--card); border:1px solid var(--line); border-radius:18px; padding:16px; }
@@ -471,6 +562,12 @@ footer { margin-top:20px; text-align:center; font-size:11px; color:var(--mute); 
     </div>
     <div style="display:flex;align-items:center;gap:8px;flex:none">
       <div class="status" id="status"><span class="led"></span><span id="statusText">…</span></div>
+      <button class="iconbtn" type="button" id="themeBtn" title="Theme"
+              aria-label="Switch theme">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+             id="themeIcon"></svg>
+      </button>
       <button class="iconbtn" type="button" id="reloadBtn" title="Reload the app"
               aria-label="Reload the app">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -524,6 +621,7 @@ footer { margin-top:20px; text-align:center; font-size:11px; color:var(--mute); 
 
   <section id="panel-control">
     <div class="grid" id="sockets"></div>
+    <div id="awayHost"></div>
     <div class="bulk">
       <button class="btn warm" type="button" id="allOn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -541,6 +639,7 @@ footer { margin-top:20px; text-align:center; font-size:11px; color:var(--mute); 
   </section>
 
   <section id="panel-timers" hidden>
+    <div id="countdownHost"></div>
     <div id="editorHost"></div>
     <button class="btn primary" type="button" id="newTimer" style="width:100%;margin-bottom:12px">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
@@ -551,6 +650,11 @@ footer { margin-top:20px; text-align:center; font-size:11px; color:var(--mute); 
   </section>
 
   <section id="panel-log" hidden>
+    <div class="card" id="usageCard" style="margin-bottom:14px">
+      <h3>Last 7 days</h3>
+      <div id="usageChart"></div>
+      <div class="chart-readout" id="usageReadout"></div>
+    </div>
     <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
       <button class="btn small ghost" type="button" id="clearLog">Clear log</button>
     </div>
@@ -588,6 +692,8 @@ const els = {
   banner:$("banner"), bannerTitle:$("bannerTitle"), bannerBody:$("bannerBody"),
   footer:$("footer"), tabs:$("tabs"), timerList:$("timerList"), editorHost:$("editorHost"),
   timerCount:$("timerCount"), logList:$("logList"), deviceCards:$("deviceCards"),
+  countdownHost:$("countdownHost"), awayHost:$("awayHost"),
+  usageChart:$("usageChart"), usageReadout:$("usageReadout"),
   panels: {
     control:$("panel-control"), timers:$("panel-timers"),
     log:$("panel-log"), device:$("panel-device"),
@@ -602,6 +708,8 @@ let myBuild = null, updateReady = false;
 // Kept outside renderDevice so the builder does not reset itself
 // every time a poll repaints the tab.
 let scenePick = [], sceneVerb = "on";
+let countdowns = [], away = null, usage7 = null;
+let cdSocket = 1, cdAction = "off", awayKey = "", usageKey = "";
 let timersKey = "", logKey = "", deviceKey = "";
 let busy = new Set(), editingName = null, editorOpen = null;
 let reachable = true, tab = "control";
@@ -1302,6 +1410,332 @@ function renderDevice(force) {
   els.deviceCards.appendChild(c3);
 }
 
+/* ============================ countdown (sleep timer) ============================ */
+
+function fmtRemaining(secs) {
+  if (secs <= 0) return "now";
+  const m = Math.round(secs / 60);
+  if (m < 60) return m + "m";
+  const h = Math.floor(m / 60);
+  return h + "h " + String(m % 60).padStart(2, "0") + "m";
+}
+
+function renderCountdowns() {
+  const host = els.countdownHost;
+  if (!host) return;
+  host.replaceChildren();
+
+  for (const cd of countdowns) {
+    const row = document.createElement("div"); row.className = "cd";
+    const left = document.createElement("div"); left.className = "cd-left";
+    const nm = document.createElement("div"); nm.className = "cd-name";
+    nm.textContent = socketName(cd.socket) + " turns " + cd.action;
+    const sub = document.createElement("div"); sub.className = "cd-sub";
+    sub.textContent = "one-off countdown";
+    left.append(nm, sub);
+
+    const t = document.createElement("div"); t.className = "cd-time";
+    t.textContent = fmtRemaining(cd.remaining);
+
+    const del = document.createElement("button");
+    del.className = "mini danger"; del.type = "button";
+    del.title = "Cancel"; del.setAttribute("aria-label", "Cancel countdown");
+    del.innerHTML = SVG(TRASH);
+    del.onclick = () => cancelCountdown(cd.id);
+
+    row.append(left, t, del);
+    host.appendChild(row);
+  }
+
+  const box = document.createElement("div"); box.className = "editor";
+  const h = document.createElement("h3"); h.textContent = "Sleep timer";
+  box.appendChild(h);
+  const hint = document.createElement("div"); hint.className = "hint";
+  hint.style.marginBottom = "12px";
+  hint.textContent =
+    "Switch something off (or on) once, after a delay. Useful for a fan at bedtime.";
+  box.appendChild(hint);
+
+  const row = document.createElement("div"); row.className = "field-row";
+  const fS = field("Socket");
+  const sel = document.createElement("select");
+  (snapshot ? snapshot.sockets : []).forEach(x => {
+    const o = document.createElement("option");
+    o.value = String(x.id); o.textContent = x.name;
+    if (x.id === cdSocket) o.selected = true;
+    sel.appendChild(o);
+  });
+  sel.onchange = () => { cdSocket = parseInt(sel.value, 10); };
+  fS.appendChild(sel);
+
+  const fA = field("Then");
+  const segA = document.createElement("div"); segA.className = "seg";
+  const onB = document.createElement("button");
+  onB.type = "button"; onB.textContent = "Turn on";
+  const offB = document.createElement("button");
+  offB.type = "button"; offB.textContent = "Turn off"; offB.className = "off-opt";
+  const paintA = () => {
+    onB.setAttribute("aria-pressed", String(cdAction === "on"));
+    offB.setAttribute("aria-pressed", String(cdAction === "off"));
+  };
+  onB.onclick = () => { cdAction = "on"; paintA(); };
+  offB.onclick = () => { cdAction = "off"; paintA(); };
+  paintA();
+  segA.append(onB, offB);
+  fA.appendChild(segA);
+  row.append(fS, fA);
+  box.appendChild(row);
+
+  const fQ = field("In");
+  const quick = document.createElement("div"); quick.className = "quick";
+  [15, 30, 45, 60, 90, 120].forEach(m => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = m < 60 ? m + " min" : (m / 60) + (m === 60 ? " hour" : " hours");
+    b.onclick = () => addCountdown(cdSocket, cdAction, m);
+    quick.appendChild(b);
+  });
+  fQ.appendChild(quick);
+  box.appendChild(fQ);
+
+  host.appendChild(box);
+}
+
+async function addCountdown(socket, action, minutes) {
+  try {
+    const d = await api("/api/countdown", { socket, action, minutes });
+    countdowns = (d && d.countdowns) || [];
+    buzz(12);
+  } catch (e) { /* the next poll tells the truth */ }
+  renderCountdowns();
+}
+
+async function cancelCountdown(id) {
+  try {
+    const d = await api("/api/countdown/" + id, undefined, "DELETE");
+    countdowns = (d && d.countdowns) || [];
+    buzz(10);
+  } catch (e) {}
+  renderCountdowns();
+}
+
+/* ============================ away mode ============================ */
+
+function renderAway() {
+  const host = els.awayHost;
+  if (!host || !away) return;
+  const key = JSON.stringify(away) + "|" +
+              (snapshot ? snapshot.sockets.map(s => s.name).join("|") : "");
+  if (key === awayKey) return;
+  awayKey = key;
+  host.replaceChildren();
+
+  const card = document.createElement("div");
+  card.className = "card" + (away.enabled ? " lit" : "");
+  card.style.marginTop = "14px";
+
+  const head = document.createElement("div"); head.className = "away-head";
+  const icon = document.createElement("div"); icon.className = "icon";
+  icon.innerHTML = SVG('<path d="M3 21h18M5 21V9l7-5 7 5v12"/><path d="M9 21v-6h6v6"/>');
+  if (away.enabled) icon.style.color = "var(--cyan)";
+
+  const meta = document.createElement("div"); meta.className = "meta";
+  const nm = document.createElement("div"); nm.className = "name";
+  nm.textContent = "Away mode";
+  const sub = document.createElement("div"); sub.className = "row2";
+  const w = document.createElement("span"); w.className = "word";
+  w.textContent = !away.enabled ? "Off"
+    : away.active ? "Running now" : "On, waits for " + away.start;
+  if (away.enabled) w.style.color = "var(--cyan)";
+  sub.appendChild(w);
+  meta.append(nm, sub);
+
+  const sw = document.createElement("div"); sw.className = "sw";
+  if (away.enabled) {
+    sw.style.background = "var(--cyan)";
+    sw.style.borderColor = "transparent";
+    sw.style.setProperty("--knob-x", "21px");
+  }
+
+  head.append(icon, meta, sw);
+  head.style.cursor = "pointer";
+  head.setAttribute("role", "switch");
+  head.setAttribute("aria-checked", String(!!away.enabled));
+  head.onclick = () => saveAway({ enabled: !away.enabled });
+  card.appendChild(head);
+
+  if (away.enabled) {
+    const body = document.createElement("div"); body.className = "away-body";
+
+    const fS = field("Sockets to simulate");
+    const chips = document.createElement("div"); chips.className = "chips";
+    (snapshot ? snapshot.sockets : []).forEach(x => {
+      const b = document.createElement("button");
+      b.type = "button"; b.textContent = x.name;
+      b.setAttribute("aria-pressed", String((away.sockets || []).indexOf(x.id) !== -1));
+      b.onclick = () => {
+        const next = (away.sockets || []).slice();
+        const at = next.indexOf(x.id);
+        if (at === -1) next.push(x.id); else next.splice(at, 1);
+        saveAway({ sockets: next });
+      };
+      chips.appendChild(b);
+    });
+    fS.appendChild(chips);
+    body.appendChild(fS);
+
+    const times = document.createElement("div"); times.className = "field-row";
+    const mk = (label, key) => {
+      const f = field(label);
+      const i = document.createElement("input");
+      i.type = "time"; i.value = away[key];
+      i.onchange = () => { const patch = {}; patch[key] = i.value; saveAway(patch); };
+      f.appendChild(i);
+      return f;
+    };
+    times.append(mk("From", "start"), mk("Until", "end"));
+    body.appendChild(times);
+
+    const note = document.createElement("div"); note.className = "away-note";
+    note.textContent =
+      "Switches the chosen sockets at irregular intervals between those times, so the " +
+      "place looks lived-in. Outside the window they go off. Turning away mode off puts " +
+      "them back exactly as they were when you switched it on.";
+    body.appendChild(note);
+    card.appendChild(body);
+  }
+
+  host.appendChild(card);
+}
+
+async function saveAway(patch) {
+  try {
+    away = await api("/api/away", patch);
+    awayKey = "";
+    buzz(10);
+  } catch (e) {}
+  renderAway();
+}
+
+async function loadAway(force) {
+  try {
+    away = await api("/api/away");
+    reachable = true;
+    if (force) awayKey = "";
+    renderAway();
+  } catch (e) { if (e.message !== "unauthorised") reachable = false; }
+}
+
+/* ============================ usage chart ============================ */
+
+function renderUsage() {
+  const host = els.usageChart;
+  if (!host || !usage7) return;
+  const key = JSON.stringify(usage7);
+  if (key === usageKey) return;
+  usageKey = key;
+  host.replaceChildren();
+
+  const days = usage7.days || [];
+  const socks = usage7.sockets || [];
+
+  // One shared scale across all sockets. Per-row scales would make a lamp that
+  // ran for an hour look identical to a monitor that ran for ten.
+  let peak = 0;
+  for (const d of days) for (const h of d.hours) if (h != null && h > peak) peak = h;
+  if (peak <= 0) {
+    const empty = document.createElement("div");
+    empty.className = "chart-empty";
+    empty.textContent = "No usage recorded yet. Switch something on and check back tomorrow.";
+    host.appendChild(empty);
+    return;
+  }
+  const scale = Math.max(1, Math.ceil(peak));
+
+  socks.forEach((sk, si) => {
+    const row = document.createElement("div"); row.className = "chart-row";
+
+    const top = document.createElement("div"); top.className = "chart-top";
+    const nm = document.createElement("div"); nm.className = "chart-name";
+    nm.textContent = sk.name;
+    const tot = document.createElement("div"); tot.className = "chart-total";
+    const sum = days.reduce((a, d) => a + (d.hours[si] || 0), 0);
+    tot.textContent = sum.toFixed(1) + "h total";
+    top.append(nm, tot);
+    row.appendChild(top);
+
+    const n = days.length || 1;
+    const W = 100, H = 46, gap = 1.6;
+    const bw = (W - gap * (n - 1)) / n;
+    const NS = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(NS, "svg");
+    svg.setAttribute("class", "chart-svg");
+    svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+    svg.setAttribute("preserveAspectRatio", "none");
+    svg.setAttribute("role", "img");
+    svg.setAttribute("aria-label", sk.name + ": " + days.map(d =>
+      d.weekday + " " + (d.hours[si] == null ? "no data"
+                         : d.hours[si].toFixed(1) + " hours")).join(", "));
+
+    days.forEach((d, di) => {
+      const x = di * (bw + gap);
+      const v = d.hours[si];
+      if (v == null) {
+        // No history that far back: a faint tick, never a zero-height bar,
+        // which would read as "it was off all day".
+        const t = document.createElementNS(NS, "rect");
+        t.setAttribute("x", x); t.setAttribute("y", H - 1.5);
+        t.setAttribute("width", bw); t.setAttribute("height", 1.5);
+        t.setAttribute("fill", "var(--line-2)");
+        svg.appendChild(t);
+        return;
+      }
+      const h = Math.max(v > 0 ? 2 : 1.2, (v / scale) * (H - 2));
+      const r = document.createElementNS(NS, "rect");
+      r.setAttribute("x", x); r.setAttribute("y", H - h);
+      r.setAttribute("width", bw); r.setAttribute("height", h);
+      r.setAttribute("rx", "1.6");
+      r.setAttribute("fill", v > 0 ? "var(--amber)" : "var(--line-2)");
+      r.style.cursor = "pointer";
+      const title = document.createElementNS(NS, "title");
+      title.textContent = d.weekday + " " + d.date + ": " + v.toFixed(1) + " h";
+      r.appendChild(title);
+      const say = () => {
+        els.usageReadout.textContent =
+          sk.name + " \u00b7 " + d.weekday + " " + d.date + " \u00b7 " +
+          v.toFixed(1) + " hours on";
+      };
+      r.addEventListener("pointerenter", say);
+      r.addEventListener("click", say);
+      svg.appendChild(r);
+    });
+    row.appendChild(svg);
+    host.appendChild(row);
+  });
+
+  const labels = document.createElement("div"); labels.className = "chart-days";
+  days.forEach(d => {
+    const sp = document.createElement("span");
+    sp.textContent = d.weekday.charAt(0);
+    labels.appendChild(sp);
+  });
+  host.appendChild(labels);
+
+  const foot = document.createElement("div"); foot.className = "hint";
+  foot.style.marginTop = "10px";
+  foot.textContent = "Hours each socket was on per day. Tap a bar for the exact figure.";
+  host.appendChild(foot);
+}
+
+async function loadUsage(force) {
+  try {
+    usage7 = await api("/api/usage/daily?days=7");
+    reachable = true;
+    if (force) usageKey = "";
+    renderUsage();
+  } catch (e) { if (e.message !== "unauthorised") reachable = false; }
+}
+
 /* ============================ render ============================ */
 
 function render() {
@@ -1339,6 +1773,7 @@ function render() {
   syncCards(list);
   for (const s of list) updateCard(cards.get(s.id), s, online);
   renderTimers(false);
+  renderAway();
   if (tab === "device") renderDevice(false);
 
   const when = snapshot.last_power_event
@@ -1371,8 +1806,10 @@ async function loadTimers(force) {
   try {
     const d = await api("/api/timers");
     timers = (d && d.timers) || [];
+    countdowns = (d && d.countdowns) || [];
     reachable = true;
     renderTimers(!!force);
+    renderCountdowns();
   } catch (e) { if (e.message !== "unauthorised") reachable = false; }
 }
 
@@ -1467,7 +1904,8 @@ function showTab(name) {
   Object.keys(els.panels).forEach(k => { els.panels[k].hidden = k !== name; });
   moveIndicator();
   if (name === "timers") loadTimers(true);
-  if (name === "log") loadLog(true);
+  if (name === "control") loadAway(false);
+  if (name === "log") { loadLog(true); loadUsage(true); }
   if (name === "device") loadDevice(true);
   startPolling();
 }
@@ -1497,11 +1935,44 @@ document.addEventListener("visibilitychange", () => {
   if (document.hidden) stopPolling();
   else {
     refresh();
-    if (tab === "log") loadLog(false);
+    if (tab === "log") { loadLog(false); loadUsage(false); }
     if (tab === "device") loadDevice(false);
+    loadAway(false);
     startPolling();
   }
 });
+
+/* ---------------------------------------------------------- theme */
+
+const THEMES = ["auto", "light", "dark"];
+const THEME_ICON = {
+  // auto: half-filled circle, light: sun, dark: moon
+  auto: '<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/>',
+  light: '<circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/>',
+  dark: '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>',
+};
+
+function currentTheme() {
+  try { return localStorage.getItem("pusb_theme") || "auto"; } catch (e) { return "auto"; }
+}
+
+function applyTheme(name) {
+  // "auto" means remove the attribute and let prefers-color-scheme decide.
+  if (name === "auto") document.documentElement.removeAttribute("data-theme");
+  else document.documentElement.setAttribute("data-theme", name);
+  const icon = document.getElementById("themeIcon");
+  if (icon) icon.innerHTML = THEME_ICON[name] || THEME_ICON.auto;
+  const btn = document.getElementById("themeBtn");
+  if (btn) btn.title = "Theme: " + name;
+  // Keep the browser chrome in step with the painted background.
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) {
+    const bg = getComputedStyle(document.body).backgroundColor;
+    if (bg) meta.setAttribute("content", bg);
+  }
+}
+
+applyTheme(currentTheme());
 
 function hardReload() {
   // A cache-busting URL rather than location.reload(): an iOS standalone web
@@ -1509,6 +1980,13 @@ function hardReload() {
   try { location.replace(location.pathname + "?r=" + Date.now()); }
   catch (e) { location.reload(); }
 }
+
+$("themeBtn").onclick = () => {
+  const next = THEMES[(THEMES.indexOf(currentTheme()) + 1) % THEMES.length];
+  try { localStorage.setItem("pusb_theme", next); } catch (e) {}
+  applyTheme(next);
+  buzz(8);
+};
 
 $("reloadBtn").onclick = () => {
   const b = $("reloadBtn");
@@ -1520,6 +1998,7 @@ $("updateBar").onclick = () => { buzz(12); hardReload(); };
 
 refresh();
 loadTimers(true);
+loadAway(true);
 requestAnimationFrame(moveIndicator);
 startPolling();
 </script>

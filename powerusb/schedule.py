@@ -185,6 +185,9 @@ class Scheduler:
         self.path = path
         self.lock = threading.RLock()
         self.timers: List[Timer] = []
+        # One-shot "off in 30 minutes" entries. Kept separate from the weekly
+        # timers because they are consumed when they fire.
+        self.countdowns: List[Dict[str, Any]] = []
         self._stop = threading.Event()
         self._thread = threading.Thread(target=self._loop, name="scheduler", daemon=True)
         self._log: Callable[[str], None] = lambda msg: None
@@ -202,6 +205,11 @@ class Scheduler:
             raw = json.loads(self.path.read_text(encoding="utf-8-sig"))
         except (OSError, json.JSONDecodeError):
             return
+        if isinstance(raw, dict):
+            for item in raw.get("countdowns") or []:
+                if (isinstance(item, dict) and item.get("fire_at")
+                        and item.get("socket") and item.get("action") in ("on", "off")):
+                    self.countdowns.append(item)
         items = raw.get("timers") if isinstance(raw, dict) else raw
         if not isinstance(items, list):
             return
@@ -220,7 +228,8 @@ class Scheduler:
 
     def _save(self) -> None:
         try:
-            payload = {"timers": [t.to_dict() for t in self.timers]}
+            payload = {"timers": [t.to_dict() for t in self.timers],
+                       "countdowns": list(self.countdowns)}
             tmp = self.path.with_suffix(".json.tmp")
             tmp.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
             tmp.replace(self.path)
@@ -277,6 +286,73 @@ class Scheduler:
                 return t
         raise ScheduleError(f"no timer with id {timer_id!r}")
 
+    # ------------------------------------------------------- countdowns
+
+    def list_countdowns(self) -> List[Dict[str, Any]]:
+        """Active countdowns, soonest first, with seconds remaining."""
+        now = _local_now()
+        with self.lock:
+            out = []
+            for cd in self.countdowns:
+                try:
+                    fire_at = datetime.fromisoformat(cd["fire_at"])
+                except (ValueError, KeyError, TypeError):
+                    continue
+                item = dict(cd)
+                item["remaining"] = max(0, int((fire_at - now).total_seconds()))
+                out.append(item)
+            return sorted(out, key=lambda c: c["remaining"])
+
+    def add_countdown(self, socket: int, action: str, minutes: float,
+                      label: str = "") -> Dict[str, Any]:
+        try:
+            socket = int(socket)
+        except (TypeError, ValueError):
+            raise ScheduleError("socket is required") from None
+        if not 1 <= socket <= SOCKET_COUNT:
+            raise ScheduleError(f"socket must be 1..{SOCKET_COUNT}, got {socket}")
+        action = str(action).lower()
+        if action not in ("on", "off"):
+            raise ScheduleError("action must be 'on' or 'off'")
+        try:
+            minutes = float(minutes)
+        except (TypeError, ValueError):
+            raise ScheduleError("minutes must be a number") from None
+        if not 0 < minutes <= 24 * 60:
+            raise ScheduleError("minutes must be between 0 and 1440")
+
+        entry = {
+            "id": uuid.uuid4().hex[:12],
+            "socket": socket,
+            "action": action,
+            "label": str(label)[:40].strip(),
+            "fire_at": (_local_now() + timedelta(minutes=minutes)).isoformat(
+                timespec="seconds"),
+            "minutes": minutes,
+        }
+        with self.lock:
+            # One pending countdown per socket+action: setting a new one should
+            # replace the old rather than leave two racing to switch it.
+            self.countdowns = [c for c in self.countdowns
+                               if not (c.get("socket") == socket
+                                       and c.get("action") == action)]
+            if len(self.countdowns) >= 20:
+                raise ScheduleError("too many countdowns (20 max)")
+            self.countdowns.append(entry)
+            self._save()
+        self._log(f"countdown set: socket {socket} -> {action} in {minutes:g} min")
+        return entry
+
+    def cancel_countdown(self, countdown_id: str) -> None:
+        with self.lock:
+            before = len(self.countdowns)
+            self.countdowns = [c for c in self.countdowns
+                               if c.get("id") != countdown_id]
+            if len(self.countdowns) == before:
+                raise ScheduleError(f"no countdown with id {countdown_id!r}")
+            self._save()
+        self._log(f"countdown {countdown_id} cancelled")
+
     # ----------------------------------------------------------- firing
 
     def start(self) -> None:
@@ -293,10 +369,41 @@ class Scheduler:
                 self._log(f"scheduler error: {exc}")
             self._stop.wait(TICK_SECONDS)
 
+    def _due_countdowns(self, now: datetime) -> List[Dict[str, Any]]:
+        """Pop every countdown that has come due, dropping stale ones."""
+        due: List[Dict[str, Any]] = []
+        with self.lock:
+            keep: List[Dict[str, Any]] = []
+            for cd in self.countdowns:
+                try:
+                    fire_at = datetime.fromisoformat(cd["fire_at"])
+                except (ValueError, KeyError, TypeError):
+                    continue          # unparseable: drop it
+                if now < fire_at:
+                    keep.append(cd)
+                elif now - fire_at <= CATCHUP_WINDOW:
+                    due.append(cd)    # fire, then consume
+                else:
+                    # Server was down long past the moment. Switching now would
+                    # be a surprise hours later, so drop it silently.
+                    self._log(f"countdown {cd.get('id')} expired unfired (too stale)")
+            if len(keep) != len(self.countdowns):
+                self.countdowns = keep
+                self._save()
+        return due
+
     def tick(self, now: Optional[datetime] = None) -> List[Timer]:
         """Fire everything that has come due. Returns the timers that ran."""
         now = now or _local_now()
         fired: List[Timer] = []
+
+        for cd in self._due_countdowns(now):
+            want = cd["action"] == "on"
+            self._log(f"countdown fired: socket {cd['socket']} -> {cd['action']}")
+            try:
+                self.controller.set_socket(cd["socket"], want, source="countdown")
+            except Exception as exc:
+                self._log(f"countdown {cd.get('id')} failed to apply: {exc}")
         with self.lock:
             dirty = False
             for timer in self.timers:

@@ -28,6 +28,9 @@ Model 1 (Basic), firmware 3.5
 - [The web app](#the-web-app)
 - [Siri, Home Screen and Lock Screen (iOS)](#siri-home-screen-and-lock-screen-ios)
 - [Scene links](#scene-links-several-sockets-one-url)
+- [Sleep timers](#sleep-timers)
+- [Away mode](#away-mode)
+- [Usage chart](#usage-chart)
 - [Command line](#command-line)
 - [HTTP API](#http-api)
 - [TCP control](#tcp-control)
@@ -149,11 +152,21 @@ Mobile-first, installable, no external dependencies — it works with no interne
 connection. Four tabs:
 
 - **Control** — the three sockets. Tap to toggle, tap the pencil to rename.
-  Icons follow the name (a socket called "Monitor" gets a monitor icon).
-- **Timers** — recurring on/off schedules per socket, per weekday.
-- **Log** — every switch, timer firing and mains power change, grouped by day.
+  Icons follow the name (a socket called "Monitor" gets a monitor icon). Away
+  mode lives here too.
+- **Timers** — recurring on/off schedules per socket per weekday, plus one-shot
+  sleep timers.
+- **Log** — a seven-day usage chart, then every switch, timer firing and mains
+  power change, grouped by day.
 - **Device** — model and firmware, the link to open on your phone, the Siri /
   Shortcuts links, the custom link builder, and the energy estimate.
+
+**Light and dark.** The button in the header cycles auto → light → dark and
+remembers the choice; auto follows the system. Both palettes were
+contrast-checked rather than eyeballed: body text is at least 4.5:1 against its
+own surface and chart marks at least 3:1. The light-mode amber is much darker
+than the dark-mode one out of necessity — the bright amber is 1.78:1 on white
+and would be unreadable as a label or a bar.
 
 ### Staying up to date
 
@@ -236,6 +249,68 @@ sockets, choose on / off / toggle, and copy the resulting link.
 
 ---
 
+## Sleep timers
+
+A one-shot countdown: switch something off (or on) once, after a delay.
+
+In the app: **Timers** tab, pick a socket and tap 15 min / 30 min / 1 hour. The
+remaining time counts down, and it can be cancelled.
+
+From Siri or a Shortcut:
+
+```
+/s/fan/off/in/30        turn the fan off in 30 minutes
+/s/light/on/in/90       turn the light on in an hour and a half
+```
+
+Two details that matter in practice:
+
+- Setting a second countdown for the same socket and action **replaces** the
+  first rather than stacking, so tapping "30 min" twice does not leave two
+  timers racing to switch the same socket.
+- A countdown missed while the server was down fires if it is recent, but is
+  **dropped** if it is hours stale. You do not want the fan coming on at 3am
+  because the PC rebooted.
+
+---
+
+## Away mode
+
+Makes the place look lived-in while nobody is. Toggle it on the **Control** tab,
+pick which sockets take part, and set the nightly window.
+
+Inside the window it switches those sockets at irregular intervals — dwell times
+are randomised per socket and deliberately not synchronised, so it does not read
+as automation from the street. Outside the window everything it controls goes
+off once and it then stays quiet until the next evening.
+
+Three guarantees worth knowing:
+
+- It **only** touches the sockets you list. Anything else you left on stays on.
+- Turning it off **restores those sockets to exactly the states they were in**
+  when you switched it on, so coming home does not mean rearranging everything.
+- It drives the controller, not the hardware, so while the wall switch is off
+  its changes queue like any other and land when power returns.
+
+Settings live in `away.json` and survive a restart.
+
+---
+
+## Usage chart
+
+The top of the **Log** tab shows how many hours each socket was on per day for
+the last week, computed by replaying the activity log.
+
+It is drawn as small multiples — one row per socket — sharing a single scale, so
+the rows are directly comparable; per-row scales would make a lamp that ran for
+an hour look the same as a monitor that ran for ten. Days the log does not reach
+back to render as a faint tick rather than a zero-height bar, because "no data"
+and "off all day" are different claims. Tap a bar for the exact figure.
+
+`GET /api/usage/daily?days=7` returns the same data as JSON.
+
+---
+
 ## Command line
 
 ```bash
@@ -271,6 +346,11 @@ not. `--direct` forces the latter.
 | GET | `/api/log` | `?limit=250` |
 | POST | `/api/log/clear` | — |
 | GET | `/api/usage` | `?hours=24` |
+| GET | `/api/usage/daily` | `?days=7` — per-day on-hours, for the chart |
+| GET | `/api/away` | — |
+| POST | `/api/away` | `{"enabled":true,"sockets":[1,3],"start":"17:30","end":"23:15"}` |
+| POST | `/api/countdown` | `{"socket":3,"action":"off","minutes":30}` |
+| DELETE | `/api/countdown/<id>` | — |
 | GET | `/api/diag` | — model, firmware, metering support, build |
 | GET | `/api/health` | — |
 
@@ -354,7 +434,8 @@ readers also accept a UTF-8 BOM, because Notepad and PowerShell both add one.
 ```
 powerusb/device.py    HID driver: wire protocol, locking, reconnection, defaults cache
 powerusb/server.py    HTTP + TCP server, mains monitor, state reconciliation, scenes
-powerusb/schedule.py  recurring timers with catch-up after downtime
+powerusb/schedule.py  recurring timers and one-shot countdowns
+powerusb/away.py      away-mode occupancy simulation
 powerusb/events.py    the activity log (JSON Lines, bounded)
 powerusb/config.py    config.json handling
 pusb.py               command line client
@@ -365,7 +446,7 @@ tests/                scheduler, wall-switch, latency and scene tests
 ```
 
 Runtime files, all gitignored: `config.json`, `state.json`, `schedules.json`,
-`events.jsonl`, `server.log`.
+`events.jsonl`, `away.json`, `server.log`.
 
 > `events.jsonl` is an occupancy record — it shows when lights went on and off,
 > i.e. when somebody was home. Keep it out of version control.
@@ -377,11 +458,14 @@ Runtime files, all gitignored: `config.json`, `state.json`, `schedules.json`,
 No hardware needed; the strip is faked, including its power supply.
 
 ```bash
-python tests/test_schedule.py    # 25 checks - timer firing, catch-up, persistence
-python tests/test_mains.py       # 23 checks - wall-switch power cycling
-python tests/test_latency.py     # 20 checks - USB round-trip count, name matching
-python tests/test_scenes.py      # 24 checks - multi-socket links
+python tests/test_schedule.py        # 25 checks - timer firing, catch-up, persistence
+python tests/test_mains.py           # 23 checks - wall-switch power cycling
+python tests/test_latency.py         # 20 checks - USB round-trip count, name matching
+python tests/test_scenes.py          # 24 checks - multi-socket links
+python tests/test_away_countdown.py  # 49 checks - sleep timers, away mode, daily usage
 ```
+
+141 checks in total.
 
 `test_latency.py` counts the USB exchanges a single switch performs and fails if
 it grows. Each exchange costs a write settle plus a read, and those land
