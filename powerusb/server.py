@@ -862,6 +862,20 @@ class Handler(BaseHTTPRequestHandler):
             name = "icon-180.png" if "180" in route or "apple" in route else "icon.png"
             self._send_file(WEB_DIR / name, "image/png")
             return
+        if route == "/widget.js":
+            # The Scriptable widget script, with this server's address and
+            # token substituted in, so it can be pasted straight into the app.
+            # text/plain rather than text/javascript so a browser shows it
+            # instead of downloading it.
+            try:
+                body = (WEB_DIR / "widget.js").read_text(encoding="utf-8-sig")
+            except OSError:
+                self._send_json({"error": "widget.js missing"}, 404)
+                return
+            base = (PUBLIC_URL or LAN_URL or "").rstrip("/")
+            body = body.replace("__BASE__", base).replace("__TOKEN__", self.token or "")
+            self._send(body.encode("utf-8"), "text/plain; charset=utf-8")
+            return
         if route == "/favicon.ico":
             self._send(b"", "image/x-icon", 204)
             return

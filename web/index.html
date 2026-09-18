@@ -1327,6 +1327,68 @@ function renderDevice(force) {
   c4.appendChild(n5);
   els.deviceCards.appendChild(c4);
 
+  // --- home screen widget (Scriptable)
+  const c6 = document.createElement("div"); c6.className = "card wide";
+  const h6 = document.createElement("h3"); h6.textContent = "Home Screen widget";
+  c6.appendChild(h6);
+
+  const n7 = document.createElement("div"); n7.className = "hint";
+  n7.style.marginBottom = "12px";
+  n7.innerHTML =
+    "A Shortcut can only fire an action \u2014 it cannot <i>show</i> anything. " +
+    "The free <b>Scriptable</b> app can: a real Home Screen widget showing which " +
+    "sockets are on, with each one tappable.<br><br>" +
+    "<b>1.</b> Install <b>Scriptable</b> from the App Store.<br>" +
+    "<b>2.</b> Copy the script below, open Scriptable, tap <b>+</b>, paste it.<br>" +
+    "<b>3.</b> Name it exactly <b>PowerUSB</b> \u2014 the tap links refer to it by name.<br>" +
+    "<b>4.</b> Long-press the Home Screen \u2192 <b>+</b> \u2192 Scriptable \u2192 pick a size.<br>" +
+    "<b>5.</b> Long-press the new widget \u2192 <b>Edit Widget</b> \u2192 Script: <b>PowerUSB</b>. " +
+    "For a small widget also set <b>Parameter</b> to one socket name.";
+  c6.appendChild(n7);
+
+  const wrow = document.createElement("div"); wrow.className = "linkrow";
+  const wtop = document.createElement("div"); wtop.className = "lr-top";
+  const wmeta = document.createElement("div");
+  wmeta.style.flex = "1"; wmeta.style.minWidth = "0";
+  const wname = document.createElement("div"); wname.className = "lr-name";
+  wname.textContent = "Widget script";
+  const wsay = document.createElement("div"); wsay.className = "lr-say";
+  wsay.innerHTML = "already filled in with <b>this</b> server's address";
+  wmeta.append(wname, wsay);
+
+  const wbtn = document.createElement("button");
+  wbtn.className = "btn small ghost"; wbtn.type = "button";
+  wbtn.textContent = "Copy script"; wbtn.style.flex = "none";
+  wbtn.onclick = async () => {
+    wbtn.textContent = "Fetching\u2026";
+    try {
+      const res = await fetch("/widget.js", {
+        headers: TOKEN ? { "X-Auth-Token": TOKEN } : {} });
+      const text = await res.text();
+      await navigator.clipboard.writeText(text);
+      wbtn.textContent = "Copied";
+    } catch (e) {
+      wbtn.textContent = "Open link instead";
+    }
+    setTimeout(() => { wbtn.textContent = "Copy script"; }, 2200);
+  };
+  wtop.append(wmeta, wbtn);
+
+  const wurl = document.createElement("div"); wurl.className = "lr-url";
+  wurl.textContent = base + "/widget.js";
+  wrow.append(wtop, wurl);
+  c6.appendChild(wrow);
+
+  const n8 = document.createElement("div"); n8.className = "hint";
+  n8.style.marginTop = "12px";
+  n8.innerHTML =
+    "<b>How live is it?</b> iOS decides when a widget redraws \u2014 usually every few " +
+    "minutes. No third-party widget can refresh on demand, so the state shown may lag " +
+    "slightly. Tapping is always correct regardless, because the server resolves the " +
+    "toggle against the real state, not the state on screen.";
+  c6.appendChild(n8);
+  els.deviceCards.appendChild(c6);
+
   // --- custom scene link builder
   const c5 = document.createElement("div"); c5.className = "card wide";
   const h5 = document.createElement("h3"); h5.textContent = "Custom link";

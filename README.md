@@ -28,6 +28,7 @@ Model 1 (Basic), firmware 3.5
 - [The web app](#the-web-app)
 - [Siri, Home Screen and Lock Screen (iOS)](#siri-home-screen-and-lock-screen-ios)
 - [Scene links](#scene-links-several-sockets-one-url)
+- [Home Screen widget (Scriptable)](#home-screen-widget-scriptable)
 - [Sleep timers](#sleep-timers)
 - [Away mode](#away-mode)
 - [Usage chart](#usage-chart)
@@ -249,6 +250,50 @@ sockets, choose on / off / toggle, and copy the resulting link.
 
 ---
 
+## Home Screen widget (Scriptable)
+
+A Shortcut can only *fire* an action; it cannot show anything. The free
+[Scriptable](https://scriptable.app) app can: a real Home Screen widget that
+displays which sockets are on, with each one tappable.
+
+The server generates a ready-to-paste copy of the script with its own address
+already filled in:
+
+```
+GET /widget.js
+```
+
+There is a **Copy script** button in the app's Device tab.
+
+1. Install **Scriptable** from the App Store.
+2. Scriptable -> `+` -> paste the script.
+3. Name it exactly **PowerUSB** - the tap links refer to it by name.
+4. Long-press the Home Screen -> `+` -> Scriptable -> choose a size.
+5. Long-press the placed widget -> **Edit Widget** -> Script: **PowerUSB**.
+   For a *small* widget also set **Parameter** to one socket name, e.g. `light`.
+
+| Size | Shows |
+|---|---|
+| Small | one socket, large. Tap toggles it. |
+| Medium | all three side by side, each tappable |
+| Large | as medium, plus the mains-power line |
+
+**How live is it?** iOS decides when a widget redraws, typically every few
+minutes; no third-party widget can refresh on demand. So the state on screen
+may lag slightly. Tapping is correct regardless — the widget sends `toggle` and
+the *server* resolves it against the real current state, not against what the
+widget happened to be showing.
+
+**What happens on a tap.** iOS gives widgets no way to do background network
+work, so something must open briefly. The widget opens Scriptable, which fires
+one request at the `/s/` endpoint, posts a notification with the reply, and
+exits. Only a native app using App Intents can avoid that flash, and that needs
+Xcode.
+
+Tailscale must be connected on the phone, as with everything else here.
+
+---
+
 ## Sleep timers
 
 A one-shot countdown: switch something off (or on) once, after a delay.
@@ -440,6 +485,7 @@ powerusb/events.py    the activity log (JSON Lines, bounded)
 powerusb/config.py    config.json handling
 pusb.py               command line client
 web/index.html        the whole GUI: no build step, no external dependencies
+web/widget.js         Scriptable Home Screen widget (served with the address filled in)
 tools/make_icon.py    regenerates the app icons (pure-python PNG encoder)
 install-autostart.ps1 Windows boot autostart
 tests/                scheduler, wall-switch, latency and scene tests
