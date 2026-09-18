@@ -1,0 +1,1435 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#07080b">
+<meta name="color-scheme" content="dark">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Power Huzaifa">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png">
+<link rel="apple-touch-icon" href="/icon.png">
+<title>Power Huzaifa</title>
+<style>
+:root {
+  --bg:#07080b; --bg-2:#0b0d12; --card:#101319; --card-2:#151922; --card-hi:#1a1f2a;
+  --line:rgba(255,255,255,.065); --line-2:rgba(255,255,255,.115);
+  --text:#e9edf5; --dim:#8b93a3; --mute:#5a6172;
+  --amber:#ffb340; --amber-2:#ff9500;
+  --amber-a10:rgba(255,179,64,.10); --amber-a18:rgba(255,179,64,.18);
+  --amber-a35:rgba(255,179,64,.35); --amber-a55:rgba(255,179,64,.55);
+  --cyan:#3ddad0; --cyan-a12:rgba(61,218,208,.12); --cyan-a30:rgba(61,218,208,.30);
+  --green:#46d67f; --warn:#f5b333; --warn-a10:rgba(245,179,51,.10);
+  --warn-a28:rgba(245,179,51,.28);
+  --red:#ff6257; --red-a10:rgba(255,98,87,.10); --red-a30:rgba(255,98,87,.30);
+  --mono: ui-monospace,"SF Mono","JetBrains Mono","Cascadia Mono",Menlo,Consolas,monospace;
+  --ease: cubic-bezier(.32,1.25,.5,1);
+  --ease-out: cubic-bezier(.22,.7,.3,1);
+}
+* { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+[hidden] { display:none !important; }
+html { -webkit-text-size-adjust:100%; }
+body {
+  margin:0; min-height:100dvh; background:var(--bg); color:var(--text);
+  font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI Variable Text","Segoe UI",
+       Roboto,"Helvetica Neue",Arial,sans-serif;
+  padding:max(20px,env(safe-area-inset-top)) 16px max(24px,env(safe-area-inset-bottom));
+  display:flex; justify-content:center; overflow-x:hidden;
+}
+body::before {
+  content:""; position:fixed; inset:-40% -40% auto -40%; height:78vh;
+  background:radial-gradient(ellipse at 50% 0%,var(--amber-a18) 0%,transparent 62%);
+  opacity:var(--lit,0); transition:opacity 1.2s var(--ease-out); pointer-events:none;
+}
+body::after {
+  content:""; position:fixed; inset:0;
+  background-image:linear-gradient(rgba(255,255,255,.016) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(255,255,255,.016) 1px,transparent 1px);
+  background-size:46px 46px;
+  mask-image:radial-gradient(ellipse at 50% 0%,#000 0%,transparent 78%);
+  -webkit-mask-image:radial-gradient(ellipse at 50% 0%,#000 0%,transparent 78%);
+  pointer-events:none;
+}
+.app { width:100%; max-width:480px; position:relative; z-index:1; }
+
+/* ---------- topbar ---------- */
+.topbar { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px; }
+.brand { display:flex; align-items:center; gap:12px; min-width:0; }
+.mark {
+  width:40px; height:40px; flex:none; display:grid; place-items:center; border-radius:12px;
+  color:var(--amber);
+  background:linear-gradient(145deg,var(--amber-a18),transparent 70%),var(--card-2);
+  border:1px solid var(--amber-a35);
+  box-shadow:0 0 22px -6px var(--amber-a55), inset 0 1px 0 rgba(255,255,255,.05);
+}
+.mark svg { width:20px; height:20px; }
+h1 { margin:0; font-size:19px; font-weight:660; letter-spacing:-.02em;
+     white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sub { margin:1px 0 0; font-size:12.5px; color:var(--dim); font-variant-numeric:tabular-nums; }
+.status {
+  display:inline-flex; align-items:center; gap:7px; flex:none;
+  font-size:11.5px; font-weight:600; color:var(--dim);
+  background:var(--card); border:1px solid var(--line); border-radius:999px;
+  padding:7px 12px 7px 10px; white-space:nowrap;
+}
+.iconbtn {
+  width:34px; height:34px; flex:none; display:grid; place-items:center;
+  border:1px solid var(--line); background:var(--card); color:var(--dim);
+  border-radius:10px; cursor:pointer;
+  transition:color .2s,border-color .2s,background .2s,transform .12s var(--ease);
+}
+.iconbtn:hover { color:var(--text); border-color:var(--line-2); }
+.iconbtn:active { transform:scale(.92); }
+.iconbtn svg { width:16px; height:16px; }
+.iconbtn.spin svg { animation:spin .7s linear; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+.updatebar {
+  display:none; width:100%; align-items:center; justify-content:center; gap:8px;
+  font:inherit; font-size:13px; font-weight:600; color:#06211f;
+  background:var(--cyan); border:0; border-radius:13px;
+  padding:12px; margin-bottom:14px; cursor:pointer;
+  animation:drop .3s var(--ease);
+}
+.updatebar.show { display:flex; }
+.updatebar:active { transform:scale(.985); }
+.updatebar svg { width:15px; height:15px; }
+
+.led { width:7px; height:7px; border-radius:50%; background:var(--mute); flex:none;
+       transition:background .3s,box-shadow .3s; }
+.status.live .led { background:var(--green); box-shadow:0 0 0 3px rgba(70,214,127,.16); }
+.status.dark .led { background:var(--warn); box-shadow:0 0 0 3px var(--warn-a10);
+                    animation:pulse 2.2s ease-in-out infinite; }
+.status.lost .led { background:var(--red); box-shadow:0 0 0 3px var(--red-a10);
+                    animation:pulse 1.3s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity:.3; } }
+
+/* ---------- tabs ---------- */
+.tabs {
+  position:relative; display:flex; gap:4px;
+  background:var(--card); border:1px solid var(--line);
+  border-radius:13px; padding:4px; margin-bottom:16px;
+}
+.tab {
+  position:relative; z-index:1; flex:1; border:0; background:transparent; color:var(--dim);
+  font:inherit; font-size:13px; font-weight:600; padding:9px 6px; border-radius:9px;
+  cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:6px;
+  transition:color .22s; white-space:nowrap;
+}
+.tab svg { width:15px; height:15px; flex:none; }
+.tab.active { color:var(--text); }
+.tab-ind {
+  position:absolute; top:4px; bottom:4px; left:0; width:0;
+  border-radius:9px; background:var(--card-hi); border:1px solid var(--line-2);
+  transition:transform .32s var(--ease), width .32s var(--ease);
+}
+.badge {
+  font-size:10px; font-weight:700; font-variant-numeric:tabular-nums;
+  background:var(--cyan-a12); color:var(--cyan); border-radius:999px;
+  padding:1px 5px; min-width:16px;
+}
+@media (max-width:430px) { .tab .lbl { display:none; } .tab { padding:10px 4px; } }
+
+/* ---------- banner ---------- */
+.banner {
+  display:none; gap:11px; align-items:flex-start;
+  background:var(--warn-a10); border:1px solid var(--warn-a28); border-radius:14px;
+  padding:13px 15px; margin-bottom:14px; font-size:13px; line-height:1.5;
+  animation:drop .3s var(--ease);
+}
+.banner.show { display:flex; }
+.banner.bad { background:var(--red-a10); border-color:var(--red-a30); }
+.banner b { display:block; font-weight:650; margin-bottom:2px; }
+.banner span { color:var(--dim); }
+.banner > svg { flex:none; margin-top:2px; width:17px; height:17px; color:var(--warn); }
+.banner.bad > svg { color:var(--red); }
+@keyframes drop { from { opacity:0; transform:translateY(-6px); } }
+
+/* ---------- sockets ---------- */
+.grid { display:flex; flex-direction:column; gap:11px; }
+.socket {
+  position:relative; display:flex; align-items:center; gap:13px; padding:16px;
+  background:var(--card); border:1px solid var(--line); border-radius:18px;
+  cursor:pointer; overflow:hidden;
+  transition:border-color .35s,background .22s,transform .13s var(--ease);
+  animation:rise .42s var(--ease) backwards;
+}
+.socket:nth-child(2) { animation-delay:.06s; }
+.socket:nth-child(3) { animation-delay:.12s; }
+@keyframes rise { from { opacity:0; transform:translateY(10px); } }
+.socket:active { transform:scale(.983); }
+@media (hover:hover) { .socket:hover { background:var(--card-2); border-color:var(--line-2); } }
+.socket:focus-visible { outline:2px solid var(--amber); outline-offset:2px; }
+.socket.on { border-color:var(--amber-a35); background:var(--card-2); }
+.socket.on::before {
+  content:""; position:absolute; inset:0; pointer-events:none;
+  background:linear-gradient(100deg,var(--amber-a10),transparent 55%);
+}
+.socket.stale { opacity:.6; }
+.icon {
+  position:relative; z-index:1; flex:none; width:42px; height:42px;
+  display:grid; place-items:center; border-radius:13px;
+  background:var(--bg-2); border:1px solid var(--line); color:var(--mute);
+  transition:color .38s,background .38s,box-shadow .38s,border-color .38s;
+}
+.socket.on .icon {
+  color:var(--amber); background:var(--amber-a10); border-color:var(--amber-a35);
+  box-shadow:0 0 20px -4px var(--amber-a55);
+}
+.icon svg { width:22px; height:22px; }
+.meta { flex:1; min-width:0; position:relative; z-index:1; }
+.name { font-size:15px; font-weight:600; letter-spacing:-.012em; line-height:1.3;
+        overflow-wrap:anywhere; }
+.row2 { display:flex; align-items:center; gap:6px; margin-top:3px;
+        font-size:11.5px; color:var(--mute); font-variant-numeric:tabular-nums; }
+.word { font-weight:700; font-size:10.5px; letter-spacing:.07em; text-transform:uppercase;
+        color:var(--mute); transition:color .3s; }
+.socket.on .word { color:var(--amber); }
+.sep { opacity:.4; }
+.chip-pending {
+  font-size:9.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--warn); background:var(--warn-a10); border:1px solid var(--warn-a28);
+  border-radius:5px; padding:1px 5px;
+}
+.pen {
+  position:relative; z-index:2; flex:none; width:28px; height:28px;
+  display:grid; place-items:center; border:0; background:transparent; color:var(--mute);
+  border-radius:8px; cursor:pointer; opacity:.45;
+  transition:opacity .2s,color .2s,background .2s;
+}
+.pen:hover { opacity:1; color:var(--text); background:var(--card-hi); }
+.pen svg { width:14px; height:14px; }
+.rename {
+  width:100%; font:inherit; font-size:15px; font-weight:600; color:var(--text);
+  background:var(--bg-2); border:1px solid var(--amber); border-radius:9px;
+  padding:6px 9px; outline:none;
+}
+.sw {
+  position:relative; z-index:1; flex:none; width:52px; height:31px; border-radius:999px;
+  background:#272c37; border:1px solid var(--line-2);
+  transition:background .34s var(--ease),box-shadow .34s,border-color .34s;
+}
+.socket.on .sw {
+  background:linear-gradient(180deg,var(--amber),var(--amber-2));
+  border-color:transparent; box-shadow:0 0 18px -3px var(--amber-a55);
+}
+.sw::after {
+  content:""; position:absolute; top:2px; left:2px; width:25px; height:25px;
+  border-radius:50%; background:#fff; box-shadow:0 2px 5px rgba(0,0,0,.45);
+  transition:transform .34s var(--ease);
+}
+.socket.on .sw::after { transform:translateX(21px); }
+.socket.busy .sw { opacity:.5; }
+
+/* ---------- buttons ---------- */
+.bulk { display:flex; gap:10px; margin-top:14px; }
+.btn {
+  flex:1; display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  padding:13px; font:inherit; font-size:14px; font-weight:600; color:var(--text);
+  background:var(--card); border:1px solid var(--line); border-radius:14px; cursor:pointer;
+  transition:background .2s,border-color .2s,color .2s,transform .13s var(--ease);
+}
+.btn:active { transform:scale(.976); }
+.btn svg { width:16px; height:16px; }
+.btn:hover { background:var(--card-2); border-color:var(--line-2); }
+.btn.warm:hover { color:var(--amber); border-color:var(--amber-a35); }
+.btn.primary {
+  background:linear-gradient(180deg,var(--amber),var(--amber-2));
+  border-color:transparent; color:#241700; font-weight:700;
+}
+.btn.primary:hover { filter:brightness(1.07); }
+.btn.ghost { background:transparent; }
+.btn.small { flex:none; padding:8px 13px; font-size:12.5px; border-radius:10px; }
+.btn:disabled { opacity:.45; cursor:not-allowed; transform:none; }
+
+/* ---------- timers ---------- */
+.timers { display:flex; flex-direction:column; gap:10px; }
+.timer {
+  display:flex; align-items:center; gap:13px; padding:14px 15px;
+  background:var(--card); border:1px solid var(--line); border-radius:16px;
+  transition:border-color .25s,opacity .25s;
+}
+.timer:hover { border-color:var(--line-2); }
+.timer.off { opacity:.5; }
+.clock { flex:none; min-width:62px; }
+.clock .hhmm { font-family:var(--mono); font-size:19px; font-weight:600;
+               letter-spacing:-.02em; font-variant-numeric:tabular-nums; line-height:1.1; }
+.clock .next { font-size:10.5px; color:var(--mute); margin-top:2px; }
+.tmeta { flex:1; min-width:0; }
+.tline1 { display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
+.tname { font-size:13.5px; font-weight:600; overflow:hidden; text-overflow:ellipsis;
+         white-space:nowrap; max-width:100%; }
+.act { font-size:9.5px; font-weight:800; letter-spacing:.07em; text-transform:uppercase;
+       border-radius:5px; padding:2px 6px; border:1px solid transparent; }
+.act.on { color:var(--amber); background:var(--amber-a10); border-color:var(--amber-a35); }
+.act.off { color:var(--dim); background:rgba(255,255,255,.04); border-color:var(--line-2); }
+.tdays { font-size:11px; color:var(--mute); margin-top:3px; }
+.tctl { display:flex; align-items:center; gap:4px; flex:none; }
+.mini {
+  width:30px; height:30px; display:grid; place-items:center; border:0; background:transparent;
+  color:var(--mute); border-radius:8px; cursor:pointer; transition:color .2s,background .2s;
+}
+.mini:hover { background:var(--card-hi); color:var(--text); }
+.mini.danger:hover { color:var(--red); background:var(--red-a10); }
+.mini svg { width:15px; height:15px; }
+.mini.pwr.is-on { color:var(--cyan); }
+.empty {
+  text-align:center; padding:38px 20px; border:1px dashed var(--line-2);
+  border-radius:16px; color:var(--mute); font-size:13px; line-height:1.6;
+}
+.empty svg { width:26px; height:26px; margin-bottom:10px; opacity:.55; }
+
+/* ---------- editor / forms ---------- */
+.editor {
+  background:var(--card); border:1px solid var(--line-2); border-radius:18px;
+  padding:16px; margin-bottom:12px; animation:drop .28s var(--ease);
+}
+.editor h3, .card h3 {
+  margin:0 0 14px; font-size:12px; font-weight:700; letter-spacing:.06em;
+  text-transform:uppercase; color:var(--dim);
+}
+.field { margin-bottom:13px; }
+.field > label {
+  display:block; font-size:11px; font-weight:650; letter-spacing:.05em;
+  text-transform:uppercase; color:var(--mute); margin-bottom:6px;
+}
+.field-row { display:flex; gap:10px; }
+.field-row > .field { flex:1; margin-bottom:13px; }
+input[type="time"], input[type="text"], input[type="number"], select {
+  width:100%; font:inherit; font-size:15px; color:var(--text);
+  background:var(--bg-2); border:1px solid var(--line-2); border-radius:11px;
+  padding:11px 12px; outline:none; transition:border-color .2s,box-shadow .2s;
+  -webkit-appearance:none; appearance:none;
+}
+input[type="time"], input[type="number"] { font-family:var(--mono); font-variant-numeric:tabular-nums; }
+input:focus, select:focus { border-color:var(--amber); box-shadow:0 0 0 3px var(--amber-a10); }
+select {
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238b93a3' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 12px center; padding-right:32px;
+}
+input[type="time"]::-webkit-calendar-picker-indicator { filter:invert(.65); cursor:pointer; }
+.seg { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+.seg button {
+  padding:11px; font:inherit; font-size:13.5px; font-weight:650; color:var(--dim);
+  background:var(--bg-2); border:1px solid var(--line-2); border-radius:11px;
+  cursor:pointer; transition:all .2s;
+}
+.seg button[aria-pressed="true"] {
+  color:var(--amber); background:var(--amber-a10); border-color:var(--amber-a35);
+}
+.seg button.off-opt[aria-pressed="true"] {
+  color:var(--text); background:var(--card-hi); border-color:var(--line-2);
+}
+.days { display:flex; gap:5px; }
+.days button {
+  flex:1; aspect-ratio:1/1; max-height:40px; font:inherit; font-size:11.5px; font-weight:650;
+  color:var(--dim); background:var(--bg-2); border:1px solid var(--line-2);
+  border-radius:9px; cursor:pointer; transition:all .18s;
+}
+.days button[aria-pressed="true"] { color:#0a1f1d; background:var(--cyan); border-color:transparent; }
+.presets { display:flex; gap:6px; margin-top:7px; flex-wrap:wrap; }
+.presets button {
+  font:inherit; font-size:11px; font-weight:600; color:var(--dim); background:transparent;
+  border:1px solid var(--line-2); border-radius:999px; padding:4px 10px; cursor:pointer;
+  transition:all .18s;
+}
+.presets button:hover { color:var(--cyan); border-color:var(--cyan-a30); }
+.err { color:var(--red); font-size:12px; margin:-4px 0 10px; }
+
+/* ---------- log ---------- */
+.logwrap { display:flex; flex-direction:column; gap:14px; }
+.daygroup { }
+.dayhead {
+  font-size:11px; font-weight:700; letter-spacing:.07em; text-transform:uppercase;
+  color:var(--mute); margin:0 0 8px 2px;
+}
+.entries {
+  background:var(--card); border:1px solid var(--line); border-radius:16px; overflow:hidden;
+}
+.entry {
+  display:flex; align-items:flex-start; gap:11px; padding:11px 14px;
+  border-bottom:1px solid var(--line); font-size:13px;
+}
+.entry:last-child { border-bottom:0; }
+.entry .when {
+  font-family:var(--mono); font-size:11.5px; color:var(--mute);
+  font-variant-numeric:tabular-nums; flex:none; padding-top:1px; min-width:52px;
+}
+.entry .pip { width:7px; height:7px; border-radius:50%; flex:none; margin-top:6px;
+              background:var(--mute); }
+.entry.k-socket-on  .pip { background:var(--amber); box-shadow:0 0 7px var(--amber-a55); }
+.entry.k-socket-off .pip { background:#3a4150; }
+.entry.k-mains-on   .pip { background:var(--green); }
+.entry.k-mains-off  .pip { background:var(--red); }
+.entry.k-timer      .pip { background:var(--cyan); }
+.entry.k-system     .pip { background:var(--dim); }
+.entry .what { flex:1; min-width:0; line-height:1.45; overflow-wrap:anywhere; }
+.entry .src {
+  font-size:9.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase;
+  color:var(--mute); border:1px solid var(--line-2); border-radius:5px;
+  padding:1px 5px; flex:none; margin-top:2px;
+}
+.entry .src.timer { color:var(--cyan); border-color:var(--cyan-a30); }
+
+/* ---------- device cards ---------- */
+.cards { display:flex; flex-direction:column; gap:12px; }
+.card { background:var(--card); border:1px solid var(--line); border-radius:18px; padding:16px; }
+.kv { display:flex; justify-content:space-between; gap:12px; padding:7px 0;
+      border-bottom:1px solid var(--line); font-size:13.5px; }
+.kv:last-child { border-bottom:0; }
+.kv .k { color:var(--dim); }
+.kv .v { font-weight:600; text-align:right; overflow-wrap:anywhere; }
+.kv .v.mono { font-family:var(--mono); font-size:12.5px; }
+.pill-ok  { color:var(--green); }
+.pill-no  { color:var(--mute); }
+.urlbox {
+  display:flex; align-items:center; gap:8px; margin:6px 0 10px;
+  background:var(--bg-2); border:1px solid var(--line-2); border-radius:12px; padding:12px;
+}
+.urlbox code {
+  flex:1; font-family:var(--mono); font-size:13.5px; color:var(--amber);
+  overflow-wrap:anywhere; user-select:all;
+}
+.hint { font-size:12px; color:var(--mute); line-height:1.6; }
+.hint b { color:var(--dim); font-weight:650; }
+.linkrow { padding:11px 0; border-bottom:1px solid var(--line); }
+.linkrow:last-child { border-bottom:0; }
+.lr-top { display:flex; align-items:center; gap:10px; }
+.lr-name { flex:1; min-width:0; font-size:13.5px; font-weight:600; }
+.lr-say { font-size:11px; color:var(--mute); margin-top:2px; }
+.lr-say b { color:var(--cyan); font-weight:650; }
+.lr-url {
+  margin-top:6px; font-family:var(--mono); font-size:11px; line-height:1.45;
+  color:var(--amber); word-break:break-all; user-select:all;
+  background:var(--bg-2); border:1px solid var(--line); border-radius:8px;
+  padding:7px 9px;
+}
+.wrow { display:flex; align-items:center; gap:10px; padding:9px 0;
+        border-bottom:1px solid var(--line); }
+.wrow:last-child { border-bottom:0; }
+.wrow .wname { flex:1; min-width:0; font-size:13.5px; font-weight:600; overflow-wrap:anywhere; }
+.wrow input { width:84px; flex:none; padding:8px 10px; font-size:14px; text-align:right; }
+.wrow .unit { font-size:12px; color:var(--mute); flex:none; width:18px; }
+.wrow .kwh { font-size:11.5px; color:var(--mute); font-family:var(--mono); flex:none;
+             min-width:64px; text-align:right; }
+footer { margin-top:20px; text-align:center; font-size:11px; color:var(--mute); line-height:1.7; }
+
+/* ---------- wide ---------- */
+@media (min-width:720px) {
+  body { padding-top:34px; }
+  .app { max-width:860px; }
+  h1 { font-size:21px; }
+  .tabs { width:420px; }
+  .grid { flex-direction:row; }
+  .socket { flex:1; flex-direction:column; align-items:flex-start; gap:16px;
+            padding:20px; min-height:168px; }
+  .socket .meta { width:100%; flex:1; }
+  .socket .icon { width:46px; height:46px; }
+  .socket .icon svg { width:24px; height:24px; }
+  .socket .name { font-size:16px; }
+  .pen { position:absolute; top:14px; right:12px; }
+  .bulk { max-width:340px; }
+  .timers { display:grid; grid-template-columns:1fr 1fr; gap:11px; }
+  .timers .empty { grid-column:1 / -1; }
+  .editor { max-width:560px; }
+  #newTimer { width:auto !important; min-width:190px; flex:none; }
+  .cards { display:grid; grid-template-columns:1fr 1fr; align-items:start; }
+  .card.wide { grid-column:1 / -1; }
+}
+@media (min-width:1100px) { .app { max-width:960px; } }
+@media (prefers-reduced-motion:reduce) {
+  *,*::before,*::after { animation-duration:.01ms !important; transition-duration:.01ms !important; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M18.36 6.64A9 9 0 1 1 5.64 6.64"/><path d="M12 2v10"/></svg>
+      </div>
+      <div style="min-width:0">
+        <h1>Power Huzaifa</h1>
+        <p class="sub" id="summary">connecting…</p>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;flex:none">
+      <div class="status" id="status"><span class="led"></span><span id="statusText">…</span></div>
+      <button class="iconbtn" type="button" id="reloadBtn" title="Reload the app"
+              aria-label="Reload the app">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <button class="updatebar" type="button" id="updateBar">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg>
+    <span>New version ready — tap to reload</span>
+  </button>
+
+  <nav class="tabs" id="tabs">
+    <span class="tab-ind"></span>
+    <button class="tab active" type="button" data-tab="control">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M18.36 6.64A9 9 0 1 1 5.64 6.64"/><path d="M12 2v10"/></svg>
+      <span class="lbl">Control</span>
+    </button>
+    <button class="tab" type="button" data-tab="timers">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg>
+      <span class="lbl">Timers</span><span class="badge" id="timerCount" hidden>0</span>
+    </button>
+    <button class="tab" type="button" data-tab="log">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M4 5h16M4 12h16M4 19h10"/></svg>
+      <span class="lbl">Log</span>
+    </button>
+    <button class="tab" type="button" data-tab="device">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="7" width="18" height="12" rx="2"/><path d="M7 7V4h10v3M8 12h.01M12 12h.01M16 12h.01"/></svg>
+      <span class="lbl">Device</span>
+    </button>
+  </nav>
+
+  <div class="banner" id="banner">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+    <div><b id="bannerTitle"></b><span id="bannerBody"></span></div>
+  </div>
+
+  <section id="panel-control">
+    <div class="grid" id="sockets"></div>
+    <div class="bulk">
+      <button class="btn warm" type="button" id="allOn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M9 18h6M10 22h4M15.1 14c.3-1.3 1-2 1.9-3a5.8 5.8 0 1 0-10 0c.9 1 1.6 1.7 1.9 3"/></svg>
+        All on
+      </button>
+      <button class="btn" type="button" id="allOff">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M18.36 6.64A9 9 0 1 1 5.64 6.64"/><path d="M12 2v10"/></svg>
+        All off
+      </button>
+    </div>
+  </section>
+
+  <section id="panel-timers" hidden>
+    <div id="editorHost"></div>
+    <button class="btn primary" type="button" id="newTimer" style="width:100%;margin-bottom:12px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+           stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      New timer
+    </button>
+    <div class="timers" id="timerList"></div>
+  </section>
+
+  <section id="panel-log" hidden>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+      <button class="btn small ghost" type="button" id="clearLog">Clear log</button>
+    </div>
+    <div class="logwrap" id="logList"></div>
+  </section>
+
+  <section id="panel-device" hidden>
+    <div class="cards" id="deviceCards"></div>
+  </section>
+
+  <footer id="footer"></footer>
+</div>
+
+<script>
+"use strict";
+
+/* ============================ setup ============================ */
+
+const params = new URLSearchParams(location.search);
+if (params.get("token")) {
+  try { localStorage.setItem("pusb_token", params.get("token")); } catch (e) {}
+  history.replaceState({}, "", location.pathname);
+}
+if (params.get("r")) history.replaceState({}, "", location.pathname);
+let TOKEN = "";
+try { TOKEN = localStorage.getItem("pusb_token") || ""; } catch (e) {}
+
+const STATE_POLL = 1500, TIMER_POLL = 20000, LOG_POLL = 5000;
+const DAY_LABELS = ["M","T","W","T","F","S","S"];
+const DAY_FULL = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+
+const $ = id => document.getElementById(id);
+const els = {
+  sockets:$("sockets"), status:$("status"), statusText:$("statusText"), summary:$("summary"),
+  banner:$("banner"), bannerTitle:$("bannerTitle"), bannerBody:$("bannerBody"),
+  footer:$("footer"), tabs:$("tabs"), timerList:$("timerList"), editorHost:$("editorHost"),
+  timerCount:$("timerCount"), logList:$("logList"), deviceCards:$("deviceCards"),
+  panels: {
+    control:$("panel-control"), timers:$("panel-timers"),
+    log:$("panel-log"), device:$("panel-device"),
+  },
+};
+
+let snapshot = null, timers = [], events = [], diag = null, usage = null;
+// The build the running page was served as. An installed PWA keeps its
+// original page forever, so we compare this against what the server reports
+// and offer a reload rather than making you re-add it to the Home Screen.
+let myBuild = null, updateReady = false;
+let timersKey = "", logKey = "", deviceKey = "";
+let busy = new Set(), editingName = null, editorOpen = null;
+let reachable = true, tab = "control";
+let statePoll = null, timerPoll = null, logPoll = null;
+
+/* ============================ api ============================ */
+
+async function api(path, body, method) {
+  const opts = { headers:{}, method: method || (body !== undefined ? "POST" : "GET") };
+  if (TOKEN) opts.headers["X-Auth-Token"] = TOKEN;
+  if (body !== undefined) {
+    opts.headers["Content-Type"] = "application/json";
+    opts.body = JSON.stringify(body);
+  }
+  const res = await fetch(path, opts);
+  let data = null;
+  try { data = await res.json(); } catch (e) {}
+  if (res.status === 401) throw new Error("unauthorised");
+  if (!res.ok) throw new Error((data && data.error) || ("HTTP " + res.status));
+  return data;
+}
+
+/* ============================ helpers ============================ */
+
+const SVG = inner =>
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" ' +
+  'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + inner + '</svg>';
+
+const ICONS = {
+  bulb:'<path d="M9 18h6M10 22h4"/><path d="M15.1 14c.3-1.3 1-2 1.9-3a5.8 5.8 0 1 0-10 0c.9 1 1.6 1.7 1.9 3"/>',
+  monitor:'<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>',
+  fan:'<circle cx="12" cy="12" r="2.2"/><path d="M12 2a4 4 0 0 1 0 8M12 22a4 4 0 0 1 0-8M2 12a4 4 0 0 1 8 0M22 12a4 4 0 0 1-8 0"/>',
+  plug:'<path d="M9 2v6M15 2v6M6 8h12v3a6 6 0 0 1-12 0zM12 17v5"/>',
+};
+const PENCIL = '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>';
+const TRASH = '<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>';
+const POWER = '<path d="M18.36 6.64A9 9 0 1 1 5.64 6.64"/><path d="M12 2v10"/>';
+
+function iconFor(name) {
+  const n = (name || "").toLowerCase();
+  if (/(monitor|screen|display|tv|pc)/.test(n)) return ICONS.monitor;
+  if (/(fan|air|purifier|cooler)/.test(n)) return ICONS.fan;
+  if (/(light|lamp|led|bulb|strip)/.test(n)) return ICONS.bulb;
+  return ICONS.plug;
+}
+function elapsed(iso) {
+  if (!iso) return "";
+  const s = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (!isFinite(s) || s < 0) return "";
+  if (s < 60) return "just now";
+  const m = Math.floor(s / 60);
+  if (m < 60) return m + "m";
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + "h " + (m % 60) + "m";
+  return Math.floor(h / 24) + "d " + (h % 24) + "h";
+}
+function untilText(iso) {
+  if (!iso) return "";
+  const s = (new Date(iso).getTime() - Date.now()) / 1000;
+  if (!isFinite(s) || s < 0) return "";
+  const m = Math.round(s / 60);
+  if (m < 60) return "in " + m + "m";
+  const h = Math.floor(m / 60);
+  if (h < 24) return "in " + h + "h" + (m % 60 ? " " + (m % 60) + "m" : "");
+  return "in " + Math.round(h / 24) + "d";
+}
+function daysText(days) {
+  if (!days || days.length === 0 || days.length === 7) return "Every day";
+  const sorted = days.slice().sort((a,b) => a - b), key = sorted.join(",");
+  if (key === "0,1,2,3,4") return "Weekdays";
+  if (key === "5,6") return "Weekends";
+  return sorted.map(d => DAY_FULL[d]).join(", ");
+}
+function socketName(id) {
+  const s = snapshot && snapshot.sockets.find(x => x.id === id);
+  return s ? s.name : "Socket " + id;
+}
+function buzz(p) { if (navigator.vibrate) { try { navigator.vibrate(p); } catch (e) {} } }
+function hhmm(d) { return d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"}); }
+
+/* ============================ socket cards ============================ */
+
+const cards = new Map();
+
+function createCard(s) {
+  const el = document.createElement("div");
+  el.className = "socket";
+  el.setAttribute("role", "switch");
+  el.tabIndex = 0;
+
+  const icon = document.createElement("div"); icon.className = "icon";
+  const meta = document.createElement("div"); meta.className = "meta";
+  const name = document.createElement("div"); name.className = "name";
+  const row2 = document.createElement("div"); row2.className = "row2";
+  const word = document.createElement("span"); word.className = "word";
+  const sep = document.createElement("span"); sep.className = "sep"; sep.textContent = "·";
+  const ago = document.createElement("span");
+  const pend = document.createElement("span"); pend.className = "chip-pending"; pend.textContent = "pending";
+  row2.append(word, sep, ago, pend);
+  meta.append(name, row2);
+
+  const pen = document.createElement("button");
+  pen.className = "pen"; pen.type = "button"; pen.title = "Rename";
+  pen.innerHTML = SVG(PENCIL);
+  pen.onclick = e => { e.stopPropagation(); beginRename(s.id); };
+
+  const sw = document.createElement("div"); sw.className = "sw";
+
+  el.append(icon, meta, pen, sw);
+  el.onclick = () => { if (editingName !== s.id) toggle(s.id); };
+  el.onkeydown = e => {
+    if (editingName === s.id) return;
+    if (e.key === " " || e.key === "Enter") { e.preventDefault(); toggle(s.id); }
+  };
+  return { el, icon, name, row2, word, sep, ago, pend, pen, sw, iconKey:"" };
+}
+
+function updateCard(c, s, online) {
+  if (!c) return;
+  c.el.classList.toggle("on", !!s.on);
+  c.el.classList.toggle("busy", busy.has(s.id));
+  c.el.classList.toggle("stale", !online);
+  c.el.setAttribute("aria-checked", String(!!s.on));
+  c.el.setAttribute("aria-label", s.name);
+  c.pen.setAttribute("aria-label", "Rename " + s.name);
+
+  const key = iconFor(s.name);
+  if (c.iconKey !== key) { c.icon.innerHTML = SVG(key); c.iconKey = key; }
+  if (editingName === s.id) return;
+
+  if (c.name.textContent !== s.name) c.name.textContent = s.name;
+  c.word.textContent = s.on ? "On" : "Off";
+  const ago = online && s.since ? elapsed(s.since) : "";
+  c.sep.hidden = !ago; c.ago.hidden = !ago;
+  if (ago) c.ago.textContent = "for " + ago;
+  c.pend.hidden = online;
+}
+
+function syncCards(list) {
+  if (cards.size === list.length && list.every(s => cards.has(s.id))) return;
+  cards.clear();
+  els.sockets.replaceChildren();
+  for (const s of list) {
+    const c = createCard(s);
+    cards.set(s.id, c);
+    els.sockets.appendChild(c.el);
+  }
+}
+
+function beginRename(id) {
+  const c = cards.get(id);
+  if (!c) return;
+  editingName = id;
+  const current = c.name.textContent;
+  const input = document.createElement("input");
+  input.className = "rename"; input.type = "text"; input.value = current; input.maxLength = 24;
+  input.setAttribute("aria-label", "Rename socket");
+  let settled = false;
+  const finish = commit => {
+    if (settled) return;
+    settled = true;
+    const value = input.value;
+    editingName = null;
+    input.replaceWith(c.name);
+    c.row2.hidden = false;
+    if (commit && value.trim() && value !== current) renameSocket(id, value);
+    else render();
+  };
+  input.onkeydown = e => {
+    e.stopPropagation();
+    if (e.key === "Enter") finish(true);
+    if (e.key === "Escape") finish(false);
+  };
+  input.onblur = () => finish(true);
+  input.onclick = e => e.stopPropagation();
+  c.name.replaceWith(input);
+  c.row2.hidden = true;
+  input.focus(); input.select();
+}
+
+/* ============================ timers ============================ */
+
+function renderTimers(force) {
+  const key = JSON.stringify(timers) + "|" + editorOpen + "|" +
+              (snapshot ? snapshot.sockets.map(s => s.name).join("|") : "");
+  if (!force && key === timersKey) return;
+  timersKey = key;
+
+  els.timerCount.textContent = String(timers.length);
+  els.timerCount.hidden = timers.length === 0;
+
+  els.timerList.replaceChildren();
+  if (timers.length === 0 && editorOpen === null) {
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    empty.innerHTML = SVG('<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/>') +
+      "<div>No timers yet.</div><div>Add one to switch a socket on or off automatically.</div>";
+    els.timerList.appendChild(empty);
+  }
+  for (const t of timers) els.timerList.appendChild(timerRow(t));
+
+  els.editorHost.replaceChildren();
+  if (editorOpen !== null) {
+    const existing = editorOpen === "new" ? null : timers.find(x => x.id === editorOpen);
+    els.editorHost.appendChild(buildEditor(existing));
+  }
+}
+
+function timerRow(t) {
+  const row = document.createElement("div");
+  row.className = "timer" + (t.enabled ? "" : " off");
+
+  const clock = document.createElement("div"); clock.className = "clock";
+  const hh = document.createElement("div"); hh.className = "hhmm"; hh.textContent = t.time;
+  const nx = document.createElement("div"); nx.className = "next";
+  nx.textContent = t.enabled ? (untilText(t.next) || "scheduled") : "paused";
+  clock.append(hh, nx);
+
+  const meta = document.createElement("div"); meta.className = "tmeta";
+  const l1 = document.createElement("div"); l1.className = "tline1";
+  const act = document.createElement("span"); act.className = "act " + t.action; act.textContent = t.action;
+  const nm = document.createElement("span"); nm.className = "tname";
+  nm.textContent = t.label || socketName(t.socket);
+  l1.append(act, nm);
+  const dd = document.createElement("div"); dd.className = "tdays";
+  dd.textContent = daysText(t.days) + (t.label ? " · " + socketName(t.socket) : "");
+  meta.append(l1, dd);
+
+  const ctl = document.createElement("div"); ctl.className = "tctl";
+  const pwr = document.createElement("button");
+  pwr.className = "mini pwr" + (t.enabled ? " is-on" : ""); pwr.type = "button";
+  pwr.title = t.enabled ? "Pause this timer" : "Enable this timer";
+  pwr.setAttribute("aria-label", pwr.title);
+  pwr.innerHTML = SVG(POWER);
+  pwr.onclick = () => updateTimer(t.id, { enabled: !t.enabled });
+
+  const ed = document.createElement("button");
+  ed.className = "mini"; ed.type = "button"; ed.title = "Edit";
+  ed.setAttribute("aria-label", "Edit timer");
+  ed.innerHTML = SVG(PENCIL);
+  ed.onclick = () => { editorOpen = t.id; renderTimers(true); };
+
+  const del = document.createElement("button");
+  del.className = "mini danger"; del.type = "button"; del.title = "Delete";
+  del.setAttribute("aria-label", "Delete timer");
+  del.innerHTML = SVG(TRASH);
+  del.onclick = () => deleteTimer(t.id);
+
+  ctl.append(pwr, ed, del);
+  row.append(clock, meta, ctl);
+  return row;
+}
+
+function field(labelText) {
+  const w = document.createElement("div"); w.className = "field";
+  const l = document.createElement("label"); l.textContent = labelText;
+  w.appendChild(l);
+  return w;
+}
+
+function buildEditor(existing) {
+  const box = document.createElement("div"); box.className = "editor";
+  const state = {
+    time: existing ? existing.time : "18:00",
+    socket: existing ? existing.socket : 1,
+    action: existing ? existing.action : "on",
+    days: existing ? (existing.days || []).slice() : [],
+    label: existing ? existing.label : "",
+  };
+
+  const title = document.createElement("h3");
+  title.textContent = existing ? "Edit timer" : "New timer";
+
+  const rowA = document.createElement("div"); rowA.className = "field-row";
+  const fTime = field("Time");
+  const time = document.createElement("input");
+  time.type = "time"; time.value = state.time;
+  time.oninput = () => { state.time = time.value; };
+  fTime.appendChild(time);
+
+  const fSock = field("Socket");
+  const sock = document.createElement("select");
+  const opts = snapshot ? snapshot.sockets
+    : [{id:1,name:"Socket 1"},{id:2,name:"Socket 2"},{id:3,name:"Socket 3"}];
+  opts.forEach(s => {
+    const o = document.createElement("option");
+    o.value = String(s.id); o.textContent = s.name;
+    if (s.id === state.socket) o.selected = true;
+    sock.appendChild(o);
+  });
+  sock.onchange = () => { state.socket = parseInt(sock.value, 10); };
+  fSock.appendChild(sock);
+  rowA.append(fTime, fSock);
+
+  const fAct = field("Action");
+  const seg = document.createElement("div"); seg.className = "seg";
+  const bOn = document.createElement("button"); bOn.type = "button"; bOn.textContent = "Turn on";
+  const bOff = document.createElement("button"); bOff.type = "button";
+  bOff.textContent = "Turn off"; bOff.className = "off-opt";
+  const paintAction = () => {
+    bOn.setAttribute("aria-pressed", String(state.action === "on"));
+    bOff.setAttribute("aria-pressed", String(state.action === "off"));
+  };
+  bOn.onclick = () => { state.action = "on"; paintAction(); };
+  bOff.onclick = () => { state.action = "off"; paintAction(); };
+  paintAction(); seg.append(bOn, bOff); fAct.appendChild(seg);
+
+  const fDays = field("Repeat");
+  const days = document.createElement("div"); days.className = "days";
+  const dayBtns = DAY_LABELS.map((lbl, i) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.textContent = lbl; b.title = DAY_FULL[i];
+    b.setAttribute("aria-label", DAY_FULL[i]);
+    b.onclick = () => {
+      const at = state.days.indexOf(i);
+      if (at === -1) state.days.push(i); else state.days.splice(at, 1);
+      paintDays();
+    };
+    days.appendChild(b);
+    return b;
+  });
+  const paintDays = () => {
+    const all = state.days.length === 0 || state.days.length === 7;
+    dayBtns.forEach((b, i) =>
+      b.setAttribute("aria-pressed", String(all ? true : state.days.indexOf(i) !== -1)));
+  };
+  paintDays();
+  const presets = document.createElement("div"); presets.className = "presets";
+  [["Every day",[]],["Weekdays",[0,1,2,3,4]],["Weekends",[5,6]]].forEach(pair => {
+    const b = document.createElement("button");
+    b.type = "button"; b.textContent = pair[0];
+    b.onclick = () => { state.days = pair[1].slice(); paintDays(); };
+    presets.appendChild(b);
+  });
+  fDays.append(days, presets);
+
+  const fLabel = field("Label (optional)");
+  const label = document.createElement("input");
+  label.type = "text"; label.maxLength = 40; label.placeholder = "e.g. Bedtime";
+  label.value = state.label || "";
+  label.oninput = () => { state.label = label.value; };
+  fLabel.appendChild(label);
+
+  const err = document.createElement("div"); err.className = "err"; err.hidden = true;
+
+  const actions = document.createElement("div");
+  actions.className = "bulk"; actions.style.marginTop = "4px";
+  const save = document.createElement("button");
+  save.className = "btn primary"; save.type = "button";
+  save.textContent = existing ? "Save changes" : "Create timer";
+  const cancel = document.createElement("button");
+  cancel.className = "btn ghost"; cancel.type = "button"; cancel.textContent = "Cancel";
+  cancel.onclick = () => { editorOpen = null; renderTimers(true); };
+
+  save.onclick = async () => {
+    if (!state.time) { err.textContent = "Pick a time."; err.hidden = false; return; }
+    save.disabled = true; err.hidden = true;
+    const payload = {
+      socket: state.socket, action: state.action, time: state.time,
+      days: state.days.length === 7 ? [] : state.days, label: state.label,
+    };
+    try {
+      if (existing) await api("/api/timers/" + existing.id, payload);
+      else await api("/api/timers", payload);
+      editorOpen = null; buzz(12);
+      await loadTimers(true);
+    } catch (e) {
+      err.textContent = e.message || "Could not save the timer.";
+      err.hidden = false; save.disabled = false;
+    }
+  };
+  actions.append(save, cancel);
+  box.append(title, rowA, fAct, fDays, fLabel, err, actions);
+  return box;
+}
+
+/* ============================ log ============================ */
+
+function entryClass(e) {
+  if (e.kind === "socket") return "k-socket-" + (e.on ? "on" : "off");
+  if (e.kind === "mains") return "k-mains-" + (e.on ? "on" : "off");
+  if (e.kind === "timer") return "k-timer";
+  return "k-system";
+}
+
+function renderLog(force) {
+  const key = JSON.stringify(events);
+  if (!force && key === logKey) return;
+  logKey = key;
+
+  els.logList.replaceChildren();
+  if (events.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    empty.innerHTML = SVG('<path d="M4 5h16M4 12h16M4 19h10"/>') +
+      "<div>Nothing recorded yet.</div>" +
+      "<div>Switching, timers and mains power changes all show up here.</div>";
+    els.logList.appendChild(empty);
+    return;
+  }
+
+  let currentDay = null, group = null, list = null;
+  const today = new Date().toDateString();
+  const yday = new Date(Date.now() - 86400000).toDateString();
+
+  for (const e of events) {
+    const when = new Date(e.t);
+    if (isNaN(when.getTime())) continue;
+    const day = when.toDateString();
+    if (day !== currentDay) {
+      currentDay = day;
+      group = document.createElement("div"); group.className = "daygroup";
+      const head = document.createElement("div"); head.className = "dayhead";
+      head.textContent = day === today ? "Today" : day === yday ? "Yesterday"
+        : when.toLocaleDateString([], {weekday:"short", month:"short", day:"numeric"});
+      list = document.createElement("div"); list.className = "entries";
+      group.append(head, list);
+      els.logList.appendChild(group);
+    }
+    const row = document.createElement("div");
+    row.className = "entry " + entryClass(e);
+    const t = document.createElement("div"); t.className = "when"; t.textContent = hhmm(when);
+    const pip = document.createElement("div"); pip.className = "pip";
+    const what = document.createElement("div"); what.className = "what"; what.textContent = e.text;
+    row.append(t, pip, what);
+    if (e.source && e.source !== "app") {
+      const src = document.createElement("span");
+      src.className = "src" + (e.source === "timer" ? " timer" : "");
+      src.textContent = e.source;
+      row.appendChild(src);
+    }
+    list.appendChild(row);
+  }
+}
+
+/* ============================ device ============================ */
+
+function fmtDuration(secs) {
+  if (!secs) return "0m";
+  const m = Math.round(secs / 60);
+  if (m < 60) return m + "m";
+  const h = Math.floor(m / 60);
+  return h + "h " + (m % 60) + "m";
+}
+
+function kv(k, v, cls) {
+  const row = document.createElement("div"); row.className = "kv";
+  const a = document.createElement("span"); a.className = "k"; a.textContent = k;
+  const b = document.createElement("span"); b.className = "v" + (cls ? " " + cls : "");
+  b.textContent = v;
+  row.append(a, b);
+  return row;
+}
+
+function renderDevice(force) {
+  const key = JSON.stringify([diag, usage, snapshot && snapshot.sockets]);
+  if (!force && key === deviceKey) return;
+  deviceKey = key;
+  els.deviceCards.replaceChildren();
+
+  // --- strip identity
+  const c1 = document.createElement("div"); c1.className = "card";
+  const h1 = document.createElement("h3"); h1.textContent = "Strip";
+  c1.appendChild(h1);
+  if (diag && diag.online) {
+    c1.appendChild(kv("Model", diag.model_name || String(diag.model)));
+    c1.appendChild(kv("Firmware", diag.firmware || "?", "mono"));
+    c1.appendChild(kv("App build", diag.build || "?", "mono"));
+    c1.appendChild(kv("Sockets", "3 switchable"));
+    const m = kv("Power metering", diag.metering ? "supported" : "not on this model");
+    m.querySelector(".v").classList.add(diag.metering ? "pill-ok" : "pill-no");
+    c1.appendChild(m);
+  } else {
+    c1.appendChild(kv("Status", "no mains power"));
+  }
+  const st = kv("Connection", snapshot && snapshot.online ? "online" : "offline");
+  st.querySelector(".v").classList.add(snapshot && snapshot.online ? "pill-ok" : "pill-no");
+  c1.appendChild(st);
+  if (snapshot && snapshot.power_events != null) {
+    c1.appendChild(kv("Mains cycles seen", String(snapshot.power_events)));
+  }
+  els.deviceCards.appendChild(c1);
+
+  // --- access / PWA
+  const c2 = document.createElement("div"); c2.className = "card";
+  const h2 = document.createElement("h3"); h2.textContent = "Open on your phone";
+  const box = document.createElement("div"); box.className = "urlbox";
+  // Prefer the address the server sees itself on: viewing this from the PC
+  // would otherwise show a localhost link that no phone can open.
+  // public_url is the Tailscale address people actually use. lan_url is only
+  // a fallback and is useless while the server is bound to 127.0.0.1.
+  const shareUrl = (diag && diag.public_url) || location.origin + "/";
+  const code = document.createElement("code"); code.textContent = shareUrl;
+  const copy = document.createElement("button");
+  copy.className = "btn small ghost"; copy.type = "button"; copy.textContent = "Copy";
+  copy.onclick = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      copy.textContent = "Copied";
+      setTimeout(() => { copy.textContent = "Copy"; }, 1400);
+    } catch (e) { copy.textContent = "Select it"; }
+  };
+  box.append(code, copy);
+  const hint = document.createElement("div"); hint.className = "hint";
+  hint.innerHTML =
+    "<b>iPhone / iPad:</b> open that link in Safari, tap Share, then " +
+    "<b>Add to Home Screen</b>.<br>" +
+    "<b>Android:</b> open it in Chrome, tap the menu, then <b>Install app</b>.<br>" +
+    "It then opens full-screen like a normal app.";
+  c2.append(h2, box, hint);
+  els.deviceCards.appendChild(c2);
+
+  // --- energy estimate
+  const c3 = document.createElement("div"); c3.className = "card wide";
+  const h3 = document.createElement("h3"); h3.textContent = "Energy estimate";
+  c3.appendChild(h3);
+  const note = document.createElement("div"); note.className = "hint";
+  note.style.marginBottom = "10px";
+  note.textContent = "This strip has no power meter, so nothing here is measured. " +
+    "Enter what each device draws and this multiplies it by the on-time actually recorded.";
+  c3.appendChild(note);
+
+  const list = snapshot ? snapshot.sockets : [];
+  for (const s of list) {
+    const u = usage && usage.sockets ? usage.sockets.find(x => x.id === s.id) : null;
+    const row = document.createElement("div"); row.className = "wrow";
+    const nm = document.createElement("div"); nm.className = "wname"; nm.textContent = s.name;
+    const inp = document.createElement("input");
+    inp.type = "number"; inp.min = "0"; inp.max = "3000"; inp.step = "1";
+    inp.value = String(Math.round(s.watts || 0));
+    inp.setAttribute("aria-label", "Watts for " + s.name);
+    inp.onchange = () => setWatts(s.id, inp.value);
+    const unit = document.createElement("span"); unit.className = "unit"; unit.textContent = "W";
+    const kwh = document.createElement("span"); kwh.className = "kwh";
+    kwh.textContent = u ? (fmtDuration(u.on_seconds) + " · " + u.kwh.toFixed(3) + " kWh") : "—";
+    row.append(nm, inp, unit, kwh);
+    c3.appendChild(row);
+  }
+  if (usage) {
+    const tot = document.createElement("div"); tot.className = "hint";
+    tot.style.marginTop = "10px";
+    tot.textContent = "Total " + usage.total_kwh.toFixed(3) + " kWh over the last " +
+      (usage.covered_hours != null ? usage.covered_hours : usage.hours) +
+      "h of recorded history.";
+    c3.appendChild(tot);
+  }
+  // --- siri / shortcuts
+  const base = ((diag && diag.public_url) || location.origin + "/").replace(/\/+$/, "");
+  const slug = n => (n || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+  const c4 = document.createElement("div"); c4.className = "card wide";
+  const h4 = document.createElement("h3"); h4.textContent = "Siri & Lock Screen";
+  c4.appendChild(h4);
+
+  const n4 = document.createElement("div"); n4.className = "hint";
+  n4.style.marginBottom = "12px";
+  n4.innerHTML =
+    "iOS will not let a web app add a Lock Screen widget or a Siri phrase — that needs a " +
+    "native app. <b>Shortcuts does both.</b><br><br>" +
+    "Shortcuts app → <b>+</b> → Add Action → <b>Get Contents of URL</b> → " +
+    "paste a link below → rename the shortcut to the words you want to say. " +
+    "The shortcut’s <b>name is the Siri phrase</b>.";
+  c4.appendChild(n4);
+
+  const linkRow = (label, say, url) => {
+    const row = document.createElement("div"); row.className = "linkrow";
+
+    const top = document.createElement("div"); top.className = "lr-top";
+    const meta = document.createElement("div"); meta.style.flex = "1"; meta.style.minWidth = "0";
+    const nm = document.createElement("div"); nm.className = "lr-name"; nm.textContent = label;
+    meta.appendChild(nm);
+    if (say) {
+      const sy = document.createElement("div"); sy.className = "lr-say";
+      sy.innerHTML = "name it <b>" + say + "</b>";
+      meta.appendChild(sy);
+    }
+    const b = document.createElement("button");
+    b.className = "btn small ghost"; b.type = "button"; b.textContent = "Copy";
+    b.style.flex = "none";
+    b.onclick = async () => {
+      try { await navigator.clipboard.writeText(url); b.textContent = "Copied"; }
+      catch (e) { b.textContent = "Select it"; }
+      setTimeout(() => { b.textContent = "Copy"; }, 1500);
+    };
+    top.append(meta, b);
+
+    const u = document.createElement("div"); u.className = "lr-url";
+    u.textContent = url;           // visible and long-press selectable on iOS
+
+    row.append(top, u);
+    c4.appendChild(row);
+  };
+
+  for (const s of (snapshot ? snapshot.sockets : [])) {
+    const id = slug(s.name) || String(s.id);
+    linkRow(s.name + " — turn on",  s.name + " on",     base + "/s/" + id + "/on");
+    linkRow(s.name + " — turn off", s.name + " off",    base + "/s/" + id + "/off");
+    linkRow(s.name + " — toggle",   "Toggle " + s.name, base + "/s/" + id + "/toggle");
+  }
+  linkRow("Everything on",  "All on",       base + "/s/all/on");
+  linkRow("Everything off", "All off",      base + "/s/all/off");
+  linkRow("Ask what is on", "Power status", base + "/s/status");
+
+  const n5 = document.createElement("div"); n5.className = "hint";
+  n5.style.marginTop = "14px";
+  n5.innerHTML =
+    "<b>Home Screen:</b> Shortcuts → ⋯ on the shortcut → Share → " +
+    "Add to Home Screen.<br>" +
+    "<b>Lock Screen:</b> long-press the Lock Screen → Customise → tap the widget row " +
+    "under the clock → Shortcuts.<br>" +
+    "<b>Control Centre (iOS 18+):</b> Settings → Control Centre → add a control " +
+    "→ Shortcuts.<br><br>" +
+    "Each link replies with a sentence, so adding a <b>Speak Text</b> action makes Siri read " +
+    "it back. Tailscale must be on — at home too.";
+  c4.appendChild(n5);
+  els.deviceCards.appendChild(c4);
+
+  els.deviceCards.appendChild(c3);
+}
+
+/* ============================ render ============================ */
+
+function render() {
+  if (!snapshot) return;
+  const online = snapshot.online, list = snapshot.sockets;
+  const lit = list.filter(s => s.on).length;
+
+  document.documentElement.style.setProperty(
+    "--lit", online ? String(Math.min(1, lit / 2)) : "0");
+
+  const bar = document.getElementById("updateBar");
+  if (bar) bar.className = "updatebar" + (updateReady ? " show" : "");
+
+  els.status.className = "status " + (!reachable ? "lost" : online ? "live" : "dark");
+  els.statusText.textContent = !reachable ? "offline" : online ? "connected" : "mains off";
+  els.summary.textContent = !reachable ? "trying to reconnect…"
+    : online ? lit + " of " + list.length + " on" : "waiting for the wall switch";
+
+  if (!reachable) {
+    els.banner.className = "banner show bad";
+    els.bannerTitle.textContent = "Can't reach the server";
+    els.bannerBody.textContent =
+      "The PC running the PowerUSB server isn't responding. Retrying automatically.";
+  } else if (!online) {
+    els.banner.className = "banner show";
+    els.bannerTitle.textContent = "The strip has no mains power";
+    els.bannerBody.textContent =
+      "The wall switch is off, so the strip is electrically dead. You can still set what " +
+      "you want below — and timers keep running — it is all applied the moment " +
+      "power returns.";
+  } else {
+    els.banner.className = "banner";
+  }
+
+  syncCards(list);
+  for (const s of list) updateCard(cards.get(s.id), s, online);
+  renderTimers(false);
+  if (tab === "device") renderDevice(false);
+
+  const when = snapshot.last_power_event
+    ? new Date(snapshot.last_power_event).toLocaleTimeString([], {hour:"numeric", minute:"2-digit"})
+    : null;
+  els.footer.textContent = !reachable ? ""
+    : online ? (when ? "Mains power returned at " + when : "PowerUSB · sockets 1–3")
+             : "Your choices are saved and applied automatically";
+}
+
+/* ============================ actions ============================ */
+
+async function refresh() {
+  try {
+    const next = await api("/api/state");
+    reachable = true;
+    if (next.build) {
+      if (myBuild === null) myBuild = next.build;
+      else if (next.build !== myBuild) updateReady = true;
+    }
+    if (busy.size === 0 && editingName === null) snapshot = next;
+    else if (snapshot) snapshot.online = next.online;
+  } catch (e) {
+    if (e.message !== "unauthorised") reachable = false;
+  }
+  render();
+}
+
+async function loadTimers(force) {
+  try {
+    const d = await api("/api/timers");
+    timers = (d && d.timers) || [];
+    reachable = true;
+    renderTimers(!!force);
+  } catch (e) { if (e.message !== "unauthorised") reachable = false; }
+}
+
+async function loadLog(force) {
+  try {
+    const d = await api("/api/log?limit=250");
+    events = (d && d.events) || [];
+    reachable = true;
+    renderLog(!!force);
+  } catch (e) { if (e.message !== "unauthorised") reachable = false; }
+}
+
+async function loadDevice(force) {
+  try {
+    const results = await Promise.all([api("/api/diag"), api("/api/usage?hours=24")]);
+    diag = results[0]; usage = results[1];
+    reachable = true;
+    renderDevice(!!force);
+  } catch (e) { if (e.message !== "unauthorised") reachable = false; }
+}
+
+async function toggle(id) {
+  if (busy.has(id) || !snapshot) return;
+  busy.add(id);
+  const s = snapshot.sockets.find(x => x.id === id);
+  const before = s ? s.on : null;
+  if (s) { s.on = !s.on; s.since = new Date().toISOString(); }
+  buzz(12); render();
+  try {
+    snapshot = await api("/api/socket/" + id, { toggle:true });
+    reachable = true;
+  } catch (e) {
+    if (s && before !== null) s.on = before;
+    if (e.message !== "unauthorised") reachable = false;
+    buzz([8,40,8]);
+  } finally {
+    busy.delete(id); render();
+  }
+}
+
+async function setAll(on) {
+  if (!snapshot) return;
+  snapshot.sockets.forEach(s => { s.on = on; });
+  buzz(14); render();
+  try { snapshot = await api("/api/all", { on }); reachable = true; }
+  catch (e) { if (e.message !== "unauthorised") reachable = false; }
+  render();
+}
+
+async function renameSocket(id, name) {
+  try { snapshot = await api("/api/socket/" + id + "/name", { name }); reachable = true; }
+  catch (e) { if (e.message !== "unauthorised") reachable = false; }
+  render();
+}
+
+async function setWatts(id, watts) {
+  try {
+    snapshot = await api("/api/socket/" + id + "/watts", { watts: Number(watts) || 0 });
+    await loadDevice(true);
+  } catch (e) { /* the next poll will show the truth */ }
+}
+
+async function updateTimer(id, patch) {
+  try { await api("/api/timers/" + id, patch); } catch (e) {}
+  await loadTimers(true);
+}
+
+async function deleteTimer(id) {
+  try { await api("/api/timers/" + id, undefined, "DELETE"); buzz(12); } catch (e) {}
+  await loadTimers(true);
+}
+
+$("clearLog").onclick = async () => {
+  try { await api("/api/log/clear", {}); } catch (e) {}
+  await loadLog(true);
+};
+
+/* ============================ tabs ============================ */
+
+function moveIndicator() {
+  const btn = els.tabs.querySelector(".tab.active");
+  const ind = els.tabs.querySelector(".tab-ind");
+  if (!btn || !ind) return;
+  ind.style.width = btn.offsetWidth + "px";
+  ind.style.transform = "translateX(" + btn.offsetLeft + "px)";
+}
+
+function showTab(name) {
+  tab = name;
+  els.tabs.querySelectorAll(".tab").forEach(b =>
+    b.classList.toggle("active", b.dataset.tab === name));
+  Object.keys(els.panels).forEach(k => { els.panels[k].hidden = k !== name; });
+  moveIndicator();
+  if (name === "timers") loadTimers(true);
+  if (name === "log") loadLog(true);
+  if (name === "device") loadDevice(true);
+  startPolling();
+}
+
+els.tabs.querySelectorAll(".tab").forEach(b => { b.onclick = () => showTab(b.dataset.tab); });
+$("allOn").onclick = () => setAll(true);
+$("allOff").onclick = () => setAll(false);
+$("newTimer").onclick = () => { editorOpen = "new"; renderTimers(true); };
+window.addEventListener("resize", moveIndicator);
+
+/* ============================ polling ============================ */
+
+function stopPolling() {
+  clearInterval(statePoll); clearInterval(timerPoll); clearInterval(logPoll);
+  statePoll = timerPoll = logPoll = null;
+}
+
+function startPolling() {
+  stopPolling();
+  statePoll = setInterval(refresh, STATE_POLL);
+  timerPoll = setInterval(() => loadTimers(false), TIMER_POLL);
+  // Only poll the log while you are looking at it.
+  if (tab === "log") logPoll = setInterval(() => loadLog(false), LOG_POLL);
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) stopPolling();
+  else {
+    refresh();
+    if (tab === "log") loadLog(false);
+    if (tab === "device") loadDevice(false);
+    startPolling();
+  }
+});
+
+function hardReload() {
+  // A cache-busting URL rather than location.reload(): an iOS standalone web
+  // app will otherwise happily re-serve the page it already has.
+  try { location.replace(location.pathname + "?r=" + Date.now()); }
+  catch (e) { location.reload(); }
+}
+
+$("reloadBtn").onclick = () => {
+  const b = $("reloadBtn");
+  b.classList.add("spin");
+  buzz(10);
+  setTimeout(hardReload, 120);
+};
+$("updateBar").onclick = () => { buzz(12); hardReload(); };
+
+refresh();
+loadTimers(true);
+requestAnimationFrame(moveIndicator);
+startPolling();
+</script>
+</body>
+</html>

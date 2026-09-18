@@ -1,0 +1,9 @@
+{
+  "host": "127.0.0.1",
+  "http_port": 8765,
+  "tcp_port": 8766,
+  "token": "",
+  "public_url": "https://your-pc.your-tailnet.ts.net:9443/",
+  "names": ["Socket 1", "Socket 2", "Socket 3"],
+  "watts": [0, 0, 0]
+}

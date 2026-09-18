@@ -1,0 +1,2 @@
+# The only third-party dependency. Everything else is Python stdlib.
+hidapi>=0.14

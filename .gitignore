@@ -1,0 +1,21 @@
+# --- runtime state: personal, never publish -------------------------------
+# events.jsonl in particular is an occupancy record: it shows exactly when
+# lights went on and off, i.e. when somebody was home.
+config.json
+state.json
+schedules.json
+events.jsonl
+server.log
+server.log.*
+
+# atomic-write temporaries
+*.tmp
+*.json.tmp
+*.jsonl.tmp
+
+# --- python ---------------------------------------------------------------
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
