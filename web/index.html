@@ -1359,29 +1359,47 @@ function renderDevice(force) {
   const wbtn = document.createElement("button");
   wbtn.className = "btn small ghost"; wbtn.type = "button";
   wbtn.textContent = "Copy script"; wbtn.style.flex = "none";
-  wbtn.onclick = async () => {
-    wbtn.textContent = "Fetching\u2026";
+
+  // Fetch it NOW, not on click. iOS Safari only allows clipboard.writeText()
+  // synchronously inside a user gesture; awaiting a fetch first expires the
+  // gesture, writeText() rejects, and the clipboard silently keeps whatever
+  // was in it - which is how you end up pasting something else entirely.
+  let widgetSrc = null;
+  fetch("/widget.js", { headers: TOKEN ? { "X-Auth-Token": TOKEN } : {} })
+    .then(r => r.text())
+    .then(t => { widgetSrc = t; })
+    .catch(() => {});
+
+  wbtn.onclick = () => {
+    if (!widgetSrc) { wbtn.textContent = "Not ready \u2014 open the link";
+      setTimeout(() => { wbtn.textContent = "Copy script"; }, 2500); return; }
+    let ok = false;
     try {
-      const res = await fetch("/widget.js", {
-        headers: TOKEN ? { "X-Auth-Token": TOKEN } : {} });
-      const text = await res.text();
-      await navigator.clipboard.writeText(text);
-      wbtn.textContent = "Copied";
-    } catch (e) {
-      wbtn.textContent = "Open link instead";
-    }
+      navigator.clipboard.writeText(widgetSrc);   // no await before this
+      ok = true;
+    } catch (e) { ok = false; }
+    wbtn.textContent = ok ? "Copied" : "Open the link instead";
     setTimeout(() => { wbtn.textContent = "Copy script"; }, 2200);
   };
   wtop.append(wmeta, wbtn);
 
-  const wurl = document.createElement("div"); wurl.className = "lr-url";
+  const wurl = document.createElement("a"); wurl.className = "lr-url";
   wurl.textContent = base + "/widget.js";
+  wurl.href = "/widget.js";
+  wurl.target = "_blank";
+  wurl.rel = "noopener";
+  wurl.style.display = "block";
+  wurl.style.textDecoration = "none";
   wrow.append(wtop, wurl);
   c6.appendChild(wrow);
 
   const n8 = document.createElement("div"); n8.className = "hint";
   n8.style.marginTop = "12px";
   n8.innerHTML =
+    "<b>If the paste will not parse:</b> tap the link above to open the script " +
+    "as a plain page, then <b>Select All \u2192 Copy</b>. That always works. The " +
+    "script is 297 lines and starts with <code>// ====</code> \u2014 if what you " +
+    "pasted does not, the clipboard had something else in it.<br><br>" +
     "<b>How live is it?</b> iOS decides when a widget redraws \u2014 usually every few " +
     "minutes. No third-party widget can refresh on demand, so the state shown may lag " +
     "slightly. Tapping is always correct regardless, because the server resolves the " +

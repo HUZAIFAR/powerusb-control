@@ -126,7 +126,7 @@ function socketTile(row, sock, online, wide) {
   nm.lineLimit = 1;
   nm.minimumScaleFactor = 0.7;
 
-  const st = tile.addText(!online ? "—" : sock.on ? "ON" : "OFF");
+  const st = tile.addText(!online ? "-" : sock.on ? "ON" : "OFF");
   st.font = Font.boldSystemFont(10);
   st.textColor = !online ? C.mute : sock.on ? C.on : C.mute;
 
@@ -293,4 +293,20 @@ async function main() {
   Script.complete();
 }
 
-await main();
+// Wrapped rather than a bare top-level `await`: top-level await is only
+// legal in module context, so a plain-script evaluator rejects the whole file
+// at parse time. An async IIFE is legal everywhere.
+(async () => {
+  try {
+    await main();
+  } catch (e) {
+    // Never leave the widget blank with no explanation.
+    if (config.runsInWidget) {
+      Script.setWidget(errorWidget(String(e)));
+      Script.complete();
+    } else {
+      console.error(e);
+      Script.complete();
+    }
+  }
+})();
