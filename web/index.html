@@ -474,6 +474,33 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter:invert(.65); curs
                  min-height:1.4em; font-variant-numeric:tabular-nums; }
 .chart-empty { font-size:12.5px; color:var(--mute); padding:14px 0; }
 
+/* ---------- collapsible cards ----------
+   The whole header row is the button, pulled out over the card's padding
+   with negative margins so the tap target is the full width and height of
+   the collapsed card rather than just the words. */
+.card.collapsible > h3 { margin:0; }
+.card.collapsible.open > h3 { margin-bottom:16px; }
+.disclose {
+  display:flex; align-items:center; gap:10px;
+  width:calc(100% + 32px); margin:-16px; padding:16px;
+  background:none; border:0; cursor:pointer; text-align:left;
+  font:inherit; color:inherit; letter-spacing:inherit; text-transform:inherit;
+  -webkit-tap-highlight-color:transparent;
+}
+.disclose-title { flex:1; min-width:0; }
+.disclose-meta {
+  flex:none; font-size:11px; font-weight:600; letter-spacing:0;
+  text-transform:none; color:var(--mute);
+}
+.disclose .chev {
+  flex:none; display:grid; place-items:center; color:var(--mute);
+  transition:transform .25s var(--ease), color .2s;
+}
+.disclose .chev svg { width:16px; height:16px; }
+.disclose:hover .chev { color:var(--text); }
+.card.open .disclose .chev { transform:rotate(180deg); }
+.disclose:focus-visible { outline:2px solid var(--amber); outline-offset:-4px; border-radius:14px; }
+
 /* ---------- device cards ---------- */
 .cards { display:flex; flex-direction:column; gap:12px; }
 .card { background:var(--card); border:1px solid var(--line); border-radius:18px; padding:16px; }
@@ -1164,6 +1191,61 @@ function kv(k, v, cls) {
   return row;
 }
 
+// Which collapsible Device cards are open. Kept outside renderDevice so a
+// repaint (it rebuilds the cards whenever the data changes) cannot snap an
+// open card shut, and persisted so the choice survives a reload.
+const openCards = (() => {
+  try { return new Set(JSON.parse(localStorage.getItem("pusb_open_cards") || "[]")); }
+  catch (e) { return new Set(); }
+})();
+
+function saveOpenCards() {
+  try { localStorage.setItem("pusb_open_cards", JSON.stringify([...openCards])); }
+  catch (e) {}
+}
+
+// Turn an already-built card into a disclosure: its <h3> becomes the toggle
+// and everything after it moves into a body that hides when closed. Cards are
+// closed unless the user has opened them.
+function makeCollapsible(card, key, meta) {
+  const h = card.querySelector("h3");
+  if (!h) return;
+
+  const body = document.createElement("div");
+  body.className = "card-body";
+  body.id = "card-body-" + key;
+  while (h.nextSibling) body.appendChild(h.nextSibling);
+  card.appendChild(body);
+
+  const title = h.textContent;
+  h.textContent = "";
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "disclose";
+  btn.setAttribute("aria-controls", body.id);
+  const t = document.createElement("span"); t.className = "disclose-title"; t.textContent = title;
+  const m = document.createElement("span"); m.className = "disclose-meta"; m.textContent = meta || "";
+  const chev = document.createElement("span"); chev.className = "chev";
+  chev.innerHTML = SVG('<path d="M6 9l6 6 6-6"/>');
+  btn.append(t, m, chev);
+  h.appendChild(btn);
+
+  const apply = () => {
+    const open = openCards.has(key);
+    card.classList.toggle("open", open);
+    body.hidden = !open;
+    btn.setAttribute("aria-expanded", String(open));
+  };
+  btn.onclick = () => {
+    if (openCards.has(key)) openCards.delete(key); else openCards.add(key);
+    saveOpenCards();
+    apply();
+    buzz(8);
+  };
+  card.classList.add("collapsible");
+  apply();
+}
+
 function renderDevice(force) {
   const key = JSON.stringify([diag, usage, snapshot && snapshot.sockets]);
   if (!force && key === deviceKey) return;
@@ -1325,6 +1407,7 @@ function renderDevice(force) {
     "Each link replies with a sentence, so adding a <b>Speak Text</b> action makes Siri read " +
     "it back. Tailscale must be on — at home too.";
   c4.appendChild(n5);
+  makeCollapsible(c4, "siri", c4.querySelectorAll(".linkrow").length + " links");
   els.deviceCards.appendChild(c4);
 
   // --- home screen widget (Scriptable)
@@ -1405,6 +1488,7 @@ function renderDevice(force) {
     "slightly. Tapping is always correct regardless, because the server resolves the " +
     "toggle against the real state, not the state on screen.";
   c6.appendChild(n8);
+  makeCollapsible(c6, "widget", "Scriptable");
   els.deviceCards.appendChild(c6);
 
   // --- custom scene link builder
@@ -1485,6 +1569,7 @@ function renderDevice(force) {
   };
 
   paint();
+  makeCollapsible(c5, "scene", "link builder");
   els.deviceCards.appendChild(c5);
 
   els.deviceCards.appendChild(c3);

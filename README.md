@@ -160,7 +160,10 @@ connection. Four tabs:
 - **Log** — a seven-day usage chart, then every switch, timer firing and mains
   power change, grouped by day.
 - **Device** — model and firmware, the link to open on your phone, the Siri /
-  Shortcuts links, the custom link builder, and the energy estimate.
+  Shortcuts links, the Home Screen widget, the custom link builder, and the
+  energy estimate. The three shortcut sections start collapsed so they don't
+  swamp the page; tap a heading to open one, and the app remembers which
+  you left open.
 
 **Light and dark.** The button in the header cycles auto → light → dark and
 remembers the choice; auto follows the system. Both palettes were
